@@ -1,0 +1,1432 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Streetstyle - Online Shop</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    .wiggle { animation: wiggle 0.3s ease-in-out; }
+    @keyframes wiggle {
+      0% { transform: rotate(0deg) scale(1); }
+      25% { transform: rotate(-3deg) scale(1.05); }
+      50% { transform: rotate(3deg) scale(1.05); }
+      75% { transform: rotate(-3deg) scale(1.05); }
+      100% { transform: rotate(0deg) scale(1); }
+    }
+    .hidden { display: none; }
+    .login-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+    }
+    .login-content {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      width: 300px;
+      position: relative;
+    }
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: red;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .login-option {
+      margin: 10px 0;
+      padding: 10px;
+      background: #f0f0f0;
+      cursor: pointer;
+      text-align: center;
+      border-radius: 4px;
+    }
+    .login-option:hover { background: #e0e0e0; }
+    .login-form {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .login-form input {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .login-form button {
+      background: #28a745;
+      color: white;
+      padding: 8px;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .login-form button:hover { background: #218838; }
+    .admin-indicator {
+      display: none;
+      width: 30px;
+      height: 30px;
+      background: #28a745;
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 30px;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    .user-profile {
+      display: none;
+      width: 30px;
+      height: 30px;
+      background: #007bff;
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 30px;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    .cookie-banner {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: #333;
+      color: white;
+      padding: 10px;
+      text-align: center;
+      z-index: 50;
+    }
+    .cookie-banner button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .cookie-banner button:hover { background: #0056b3; }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans">
+  <!-- Header -->
+  <header class="bg-[#1a2526] text-white py-4 px-6 flex justify-between items-center">
+    <div class="flex items-center space-x-4">
+      <div id="shop-name-header" class="text-2xl font-bold">Streetstyle</div>
+      <a href="#" class="text-[#007bff] hover:underline" id="home-link">Home</a>
+    </div>
+    <div class="flex items-center space-x-4">
+      <button id="cart-button" class="bg-[#28a745] text-white px-4 py-2 rounded-full hover:bg-green-600 transition">Warenkorb (0)</button>
+      <a href="#" class="text-white hover:text-[#007bff] px-4 py-2 rounded-full" id="settings-link">Einstellungen</a>
+      <button id="login-btn" class="bg-[#007bff] text-white px-4 py-2 rounded-full hover:bg-blue-600 transition">Login</button>
+      <div class="admin-indicator" id="adminIndicator">Ad</div>
+      <div class="user-profile" id="userProfile"></div>
+    </div>
+  </header>
+
+  <!-- Login Modal -->
+  <div class="login-modal" id="loginModal">
+    <div class="login-content">
+      <span class="close-btn" id="closeLoginModal">X</span>
+      <div class="login-option" id="adminLoginOption">Admin Login</div>
+      <div class="login-option" id="customerLoginOption">Kunden Login</div>
+      <div class="login-option" id="guestModeOption">Gast-Modus</div>
+      <form id="adminLoginForm" class="login-form">
+        <input type="email" id="adminEmail" placeholder="E-Mail" required>
+        <input type="password" id="adminPassword" placeholder="Passwort" required>
+        <input type="text" id="adminCode" placeholder="Code" required>
+        <input type="text" id="adminKey" placeholder="Sicherheitsschlüssel" required>
+        <button type="submit" id="requestAdminCodeBtn">Code anfordern</button>
+      </form>
+      <form id="adminVerifyForm" class="login-form hidden">
+        <input type="text" id="adminVerifyCode" placeholder="Verifizierungscode (5-stellig)" required>
+        <button type="submit" id="verifyAdminBtn">Verifizieren</button>
+      </form>
+      <form id="customerLoginForm" class="login-form">
+        <input type="email" id="customerEmail" placeholder="E-Mail" required>
+        <button type="submit" id="requestCustomerCodeBtn">Code anfordern</button>
+      </form>
+      <form id="customerVerifyForm" class="login-form hidden">
+        <input type="text" id="customerVerifyCode" placeholder="Verifizierungscode (5-stellig)" required>
+        <button type="submit" id="verifyCustomerBtn">Verifizieren</button>
+      </form>
+      <form id="adminPasswordResetForm" class="login-form hidden">
+        <input type="text" id="adminResetCode" placeholder="Verifizierungscode (5-stellig)" required>
+        <input type="password" id="adminNewPassword" placeholder="Neues Passwort" required>
+        <button type="submit" id="resetAdminPasswordBtn">Passwort ändern</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Cookie Banner -->
+  <div class="cookie-banner" id="cookieBanner">
+    <p>Diese Website verwendet Cookies. Klicken Sie auf "OK", um zuzustimmen.</p>
+    <button id="cookieOkBtn">OK</button>
+  </div>
+
+  <!-- Main Content -->
+  <main>
+    <section id="home-section" class="home-section">
+      <div class="py-8">
+        <div class="container mx-auto px-4">
+          <img id="banner-image" src="https://via.placeholder.com/1200x400?text=Streetstyle+Banner" alt="Streetstyle Banner" class="w-full h-64 object-cover rounded-2xl">
+        </div>
+      </div>
+      <div class="text-center py-8">
+        <h1 id="welcome-text" class="text-4xl font-bold">Willkommen bei <span class="text-4xl">STREETSTYLE</span>!</h1>
+      </div>
+      <div class="container mx-auto px-4 py-8">
+        <div id="category-buttons" class="flex justify-center space-x-4"></div>
+      </div>
+      <div class="container mx-auto px-4 py-8">
+        <h3 class="text-2xl font-bold text-center mb-4">Empfohlenes Produkt</h3>
+        <div id="featured-product" class="bg-white p-6 rounded-2xl shadow-lg max-w-2xl mx-auto flex flex-col md:flex-row"></div>
+      </div>
+      <div id="products" class="container mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+    </section>
+
+    <section id="settings-section" class="settings-section hidden">
+      <div class="container mx-auto px-4 py-8">
+        <h2 class="text-3xl font-bold text-center mb-8">Admin-Einstellungen</h2>
+        <div class="flex flex-col md:flex-row gap-6">
+          <div class="w-full md:w-1/4 bg-white p-4 rounded-2xl shadow-lg">
+            <nav class="flex flex-col space-y-2">
+              <button class="settings-menu-btn bg-[#007bff] text-white px-4 py-2 rounded-full hover:bg-blue-600 transition" data-section="general" id="settingsGeneralBtn">Allgemein</button>
+              <button class="settings-menu-btn bg-gray-300 text-black px-4 py-2 rounded-full hover:bg-gray-400 transition" data-section="products" id="settingsProductsBtn">Produkte</button>
+              <button class="settings-menu-btn bg-gray-300 text-black px-4 py-2 rounded-full hover:bg-gray-400 transition" data-section="orders" id="settingsOrdersBtn">Bestellungen</button>
+            </nav>
+          </div>
+          <div class="w-full md:w-3/4 bg-white p-6 rounded-2xl shadow-lg">
+            <div id="settings-general" class="settings-content">
+              <h3 class="text-xl font-semibold mb-4">Allgemein</h3>
+              <label class="block text-lg font-semibold mb-1">Shop-Name</label>
+              <input type="text" id="shop-name" value="Streetstyle" class="w-full p-2 border rounded-xl mb-2">
+              <label class="block text-lg font-semibold mb-1">Banner-Bild</label>
+              <input type="file" id="banner-image-upload" accept="image/*" class="w-full p-2 border rounded-xl mb-2">
+            </div>
+            <div id="settings-products" class="settings-content hidden">
+              <h3 class="text-xl font-semibold mb-4">Produkte</h3>
+              <label class="block text-lg font-semibold mb-1">Produkt hinzufügen</label>
+              <select id="product-category" class="w-full p-2 border rounded-xl mb-2"></select>
+              <input type="text" id="product-title" placeholder="Produkttitel" class="w-full p-2 border rounded-xl mb-2" required>
+              <input type="text" id="product-price" placeholder="Preis (z.B. 39,99 €)" class="w-full p-2 border rounded-xl mb-2" required>
+              <input type="file" id="product-image" accept="image/*" class="w-full p-2 border rounded-xl mb-2" required>
+              <button id="addProductBtn" class="bg-[#28a745] text-white px-4 py-2 rounded-full hover:bg-green-600 transition w-full">Produkt hinzufügen</button>
+              <label class="block text-lg font-semibold mb-1 mt-4">Kategorien</label>
+              <input type="text" id="category-input" placeholder="Neue Kategorie" class="w-full p-2 border rounded-xl mb-2">
+              <button id="addCategoryBtn" class="bg-[#28a745] text-white px-4 py-2 rounded-full hover:bg-green-600 transition w-full">Kategorie hinzufügen</button>
+              <ul id="category-list" class="mt-2"></ul>
+            </div>
+            <div id="settings-orders" class="settings-content hidden">
+              <h3 class="text-xl font-semibold mb-4">Bestellungen</h3>
+              <label class="block text-lg font-semibold mb-1">Neuer Sicherheitsschlüssel</label>
+              <button id="generateKeyBtn" class="bg-[#007bff] text-white px-4 py-2 rounded-full hover:bg-blue-600 transition w-full mb-2">Schlüssel erstellen</button>
+              <label class="block text-lg font-semibold mb-1">Aktuelles Passwort</label>
+              <div class="flex items-center mb-2">
+                <input type="password" id="currentPassword" value="" class="w-full p-2 border rounded-xl mr-2" readonly>
+                <button id="togglePasswordBtn" class="bg-gray-500 text-white px-4 py-2 rounded-full hover:bg-gray-600 transition">Anzeigen</button>
+              </div>
+              <label class="block text-lg font-semibold mb-1">Aktueller Sicherheitsschlüssel</label>
+              <div class="flex items-center mb-2">
+                <input type="password" id="currentKey" value="" class="w-full p-2 border rounded-xl mr-2" readonly>
+                <button id="toggleKeyBtn" class="bg-gray-500 text-white px-4 py-2 rounded-full hover:bg-gray-600 transition">Anzeigen</button>
+              </div>
+              <label class="block text-lg font-semibold mb-1">Passwort ändern</label>
+              <input type="password" id="newPassword" placeholder="Neues Passwort" class="w-full p-2 border rounded-xl mb-2">
+              <button id="changePasswordBtn" class="bg-[#28a745] text-white px-4 py-2 rounded-full hover:bg-green-600 transition w-full mb-2">Passwort ändern</button>
+              <label class="block text-lg font-semibold mb-1">Sicherheitsschlüssel ändern</label>
+              <input type="text" id="newKey" placeholder="Neuer Schlüssel" class="w-full p-2 border rounded-xl mb-2">
+              <button id="changeKeyBtn" class="bg-[#28a745] text-white px-4 py-2 rounded-full hover:bg-green-600 transition w-full mb-2">Schlüssel ändern</button>
+              <button id="forgotPasswordBtn" class="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 transition w-full">Passwort vergessen</button>
+              <h4 class="text-lg font-semibold mb-2 mt-4">Bestellungen</h4>
+              <ul id="orders-list" class="list-disc pl-5 mb-4"></ul>
+              <h4 class="text-lg font-semibold mb-2">Bibliothek</h4>
+              <ul id="library-list" class="list-disc pl-5"></ul>
+            </div>
+            <div class="text-center mt-6">
+              <button id="saveSettingsBtn" class="bg-[#28a745] text-white px-6 py-3 rounded-full hover:bg-green-600 transition">Einstellungen speichern</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="cart-section" class="cart-section hidden">
+      <div class="container mx-auto px-4 py-8">
+        <h2 class="text-3xl font-bold text-center mb-8">Warenkorb</h2>
+        <div id="cart-items" class="bg-white p-6 rounded-2xl shadow-lg max-w-2xl mx-auto"></div>
+        <div class="text-center mt-6">
+          <button id="checkoutBtn" class="bg-[#28a745] text-white px-6 py-3 rounded-full hover:bg-green-600 transition">Zum Checkout</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="checkout-section" class="checkout-section hidden">
+      <div class="container mx-auto px-4 py-8">
+        <h2 class="text-3xl font-bold text-center mb-8">Checkout</h2>
+        <div class="bg-white p-6 rounded-2xl shadow-lg max-w-2xl mx-auto">
+          <label class="block text-lg font-semibold mb-2">Zahlungsmethode</label>
+          <select id="payment-method" class="w-full p-3 border rounded-xl mb-4">
+            <option value="credit-card">Kreditkarte</option>
+            <option value="paypal">PayPal</option>
+          </select>
+          <div id="payment-details" class="mb-4"></div>
+          <label class="block text-lg font-semibold mb-2">Lieferadresse</label>
+          <input type="text" id="address" placeholder="Adresse" class="w-full p-3 border rounded-xl mb-2">
+          <input type="text" id="city" placeholder="Stadt" class="w-full p-3 border rounded-xl mb-2">
+          <input type="text" id="zip" placeholder="PLZ" class="w-full p-3 border rounded-xl mb-2">
+          <div class="text-center">
+            <button id="completeOrderBtn" class="bg-[#28a745] text-white px-6 py-3 rounded-full hover:bg-green-600 transition">Bestellung abschließen</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // State Management
+    const state = JSON.parse(localStorage.getItem('shopState')) || {
+      categories: ['tshirts', 'hoodies'],
+      products: [
+        { id: 'classic-tee', category: 'tshirts', title: 'Classic Tee', price: '29,99 €', image: 'https://via.placeholder.com/300?text=Classic+Tee', active: true },
+        { id: 'cozy-hoodie', category: 'hoodies', title: 'Cozy Hoodie', price: '49,99 €', image: 'https://via.placeholder.com/300?text=Cozy+Hoodie', active: true }
+      ],
+      cart: [],
+      orders: [],
+      library: [],
+      settings: {
+        shopName: 'Streetstyle',
+        banner: 'https://via.placeholder.com/1200x400?text=Streetstyle+Banner',
+        featuredProductEnabled: true
+      },
+      user: { type: 'guest', adminEmail: '', adminPassword: '', adminCode: '', adminKey: '', customerEmail: '' },
+      cartCount: 0,
+      verification: { adminCode: null, customerCode: null, passwordResetCode: null }
+    };
+
+    // Save State
+    const saveState = () => localStorage.setItem('shopState', JSON.stringify(state));
+
+    // DOM Utility
+    const $ = (id) => document.getElementById(id);
+    const wiggle = (el) => {
+      if (el) {
+        el.classList.add('wiggle');
+        setTimeout(() => el.classList.remove('wiggle'), 300);
+      }
+    };
+
+    // Login Modal Functions
+    const openLoginModal = () => {
+      try {
+        const modal = $('loginModal');
+        if (modal) modal.style.display = 'flex';
+        // Vorfüllen der gespeicherten E-Mail
+        if (state.user.adminEmail) $('adminEmail').value = state.user.adminEmail;
+        if (state.user.customerEmail) $('customerEmail').value = state.user.customerEmail;
+      } catch (e) {
+        console.error('Open Login Modal Error:', e);
+      }
+    };
+
+    const showAdminLogin = () => {
+      try {
+        $('adminLoginForm').style.display = 'flex';
+        $('adminVerifyForm').style.display = 'none';
+        $('adminPasswordResetForm').style.display = 'none';
+        $('customerLoginForm').style.display = 'none';
+        $('customerVerifyForm').style.display = 'none';
+      } catch (e) {
+        console.error('Show Admin Login Error:', e);
+      }
+    };
+
+    const showCustomerLogin = () => {
+      try {
+        $('adminLoginForm').style.display = 'none';
+        $('adminVerifyForm').style.display = 'none';
+        $('adminPasswordResetForm').style.display = 'none';
+        $('customerLoginForm').style.display = 'flex';
+        $('customerVerifyForm').style.display = 'none';
+      } catch (e) {
+        console.error('Show Customer Login Error:', e);
+      }
+    };
+
+    const showPasswordResetForm = () => {
+      try {
+        $('adminLoginForm').style.display = 'none';
+        $('adminVerifyForm').style.display = 'none';
+        $('adminPasswordResetForm').style.display = 'flex';
+        $('customerLoginForm').style.display = 'none';
+        $('customerVerifyForm').style.display = 'none';
+      } catch (e) {
+        console.error('Show Password Reset Form Error:', e);
+      }
+    };
+
+    const requestAdminCode = (e) => {
+      e.preventDefault();
+      try {
+        const email = $('adminEmail')?.value;
+        const password = $('adminPassword')?.value;
+        const code = $('adminCode')?.value;
+        const key = $('adminKey')?.value;
+        if (!email || !password || !code || !key) return alert('Alle Felder ausfüllen.');
+        state.user.adminEmail = email;
+        state.user.adminPassword = password;
+        state.user.adminCode = code;
+        state.user.adminKey = key; // Schlüssel wird beim ersten Login gesetzt
+        state.verification.adminCode = Math.floor(10000 + Math.random() * 90000).toString();
+        alert(`Verifizierungscode für ${email}: ${state.verification.adminCode}`);
+        saveState();
+        $('adminLoginForm').style.display = 'none';
+        $('adminVerifyForm').style.display = 'flex';
+      } catch (e) {
+        console.error('Request Admin Code Error:', e);
+      }
+    };
+
+    const verifyAdmin = (e) => {
+      e.preventDefault();
+      try {
+        const verifyCode = $('adminVerifyCode')?.value;
+        if (verifyCode === state.verification.adminCode) {
+          state.user.type = 'admin';
+          localStorage.setItem('userType', 'admin');
+          localStorage.setItem('adminKey', state.user.adminKey);
+          localStorage.setItem('adminPassword', state.user.adminPassword);
+          localStorage.setItem('adminEmail', state.user.adminEmail);
+          saveState();
+          $('adminIndicator').style.display = 'block';
+          $('loginModal').style.display = 'none';
+          $('login-btn').style.display = 'none';
+          $('userProfile').style.display = 'none';
+          alert('Admin-Anmeldung erfolgreich!');
+          updateCredentialsDisplay();
+        } else {
+          alert('Ungültiger Verifizierungscode.');
+        }
+      } catch (e) {
+        console.error('Verify Admin Error:', e);
+      }
+    };
+
+    const requestCustomerCode = (e) => {
+      e.preventDefault();
+      try {
+        const email = $('customerEmail')?.value;
+        if (!email) return alert('E-Mail eingeben.');
+        state.user.customerEmail = email;
+        state.verification.customerCode = Math.floor(10000 + Math.random() * 90000).toString();
+        alert(`Verifizierungscode für ${email}: ${state.verification.customerCode}`);
+        saveState();
+        $('customerLoginForm').style.display = 'none';
+        $('customerVerifyForm').style.display = 'flex';
+      } catch (e) {
+        console.error('Request Customer Code Error:', e);
+      }
+    };
+
+    const verifyCustomer = (e) => {
+      e.preventDefault();
+      try {
+        const verifyCode = $('customerVerifyCode')?.value;
+        if (verifyCode === state.verification.customerCode) {
+          state.user.type = 'customer';
+          localStorage.setItem('userType', 'customer');
+          localStorage.setItem('customerEmail', state.user.customerEmail);
+          saveState();
+          const initial = state.user.customerEmail.charAt(0).toUpperCase();
+          $('userProfile').textContent = initial;
+          $('userProfile').style.display = 'block';
+          $('loginModal').style.display = 'none';
+          $('login-btn').style.display = 'none';
+          $('adminIndicator').style.display = 'none';
+          alert('Kunden-Anmeldung erfolgreich!');
+        } else {
+          alert('Ungültiger Verifizierungscode.');
+        }
+      } catch (e) {
+        console.error('Verify Customer Error:', e);
+      }
+    };
+
+    const setGuestMode = () => {
+      try {
+        state.user.type = 'guest';
+        localStorage.setItem('userType', 'guest');
+        saveState();
+        $('loginModal').style.display = 'none';
+        $('login-btn').style.display = 'block';
+        $('adminIndicator').style.display = 'none';
+        $('userProfile').style.display = 'none';
+      } catch (e) {
+        console.error('Set Guest Mode Error:', e);
+      }
+    };
+
+    const generateKey = () => {
+      try {
+        const newKey = Math.random().toString(36).substring(2, 10);
+        state.user.adminKey = newKey;
+        localStorage.setItem('adminKey', newKey);
+        saveState();
+        alert(`Neuer Sicherheitsschlüssel: ${newKey}`);
+        updateCredentialsDisplay();
+        wiggle($('generateKeyBtn'));
+      } catch (e) {
+        console.error('Generate Key Error:', e);
+      }
+    };
+
+    const togglePasswordVisibility = () => {
+      try {
+        const input = $('currentPassword');
+        const btn = $('togglePasswordBtn');
+        if (input && btn) {
+          if (input.type === 'password') {
+            input.type = 'text';
+            btn.textContent = 'Verbergen';
+          } else {
+            input.type = 'password';
+            btn.textContent = 'Anzeigen';
+          }
+          wiggle(btn);
+        }
+      } catch (e) {
+        console.error('Toggle Password Visibility Error:', e);
+      }
+    };
+
+    const toggleKeyVisibility = () => {
+      try {
+        const input = $('currentKey');
+        const btn = $('toggleKeyBtn');
+        if (input && btn) {
+          if (input.type === 'password') {
+            input.type = 'text';
+            btn.textContent = 'Verbergen';
+          } else {
+            input.type = 'password';
+            btn.textContent = 'Anzeigen';
+          }
+          wiggle(btn);
+        }
+      } catch (e) {
+        console.error('Toggle Key Visibility Error:', e);
+      }
+    };
+
+    const updateCredentialsDisplay = () => {
+      try {
+        const passwordInput = $('currentPassword');
+        const keyInput = $('currentKey');
+        if (passwordInput) passwordInput.value = state.user.adminPassword || '';
+        if (keyInput) keyInput.value = state.user.adminKey || '';
+      } catch (e) {
+        console.error('Update Credentials Display Error:', e);
+      }
+    };
+
+    const forgotPassword = () => {
+      try {
+        if (!state.user.adminEmail || !state.user.adminPassword) return alert('Kein Admin-Konto vorhanden.');
+        state.verification.passwordResetCode = Math.floor(10000 + Math.random() * 90000).toString();
+        alert(`Ihr aktuelles Passwort wurde an ${state.user.adminEmail} gesendet: ${state.user.adminPassword}\nVerifizierungscode für Passwortänderung: ${state.verification.passwordResetCode}`);
+        saveState();
+        openLoginModal();
+        showPasswordResetForm();
+        wiggle($('forgotPasswordBtn'));
+      } catch (e) {
+        console.error('Forgot Password Error:', e);
+      }
+    };
+
+    const changePassword = () => {
+      try {
+        const newPassword = $('newPassword')?.value;
+        if (!newPassword) return alert('Neues Passwort eingeben.');
+        state.user.adminPassword = newPassword;
+        localStorage.setItem('adminPassword', newPassword);
+        saveState();
+        alert('Passwort geändert.');
+        $('newPassword').value = '';
+        updateCredentialsDisplay();
+        wiggle($('changePasswordBtn'));
+      } catch (e) {
+        console.error('Change Password Error:', e);
+      }
+    };
+
+    const changeKey = () => {
+      try {
+        const newKey = $('newKey')?.value;
+        if (!newKey) return alert('Neuen Schlüssel eingeben.');
+        state.user.adminKey = newKey;
+        localStorage.setItem('adminKey', newKey);
+        saveState();
+        alert('Schlüssel geändert.');
+        $('newKey').value = '';
+        updateCredentialsDisplay();
+        wiggle($('changeKeyBtn'));
+      } catch (e) {
+        console.error('Change Key Error:', e);
+      }
+    };
+
+    const resetPassword = (e) => {
+      e.preventDefault();
+      try {
+        const resetCode = $('adminResetCode')?.value;
+        const newPassword = $('adminNewPassword')?.value;
+        if (!resetCode || !newPassword) return alert('Alle Felder ausfüllen.');
+        if (resetCode === state.verification.passwordResetCode) {
+          state.user.adminPassword = newPassword;
+          localStorage.setItem('adminPassword', newPassword);
+          state.verification.passwordResetCode = null;
+          saveState();
+          alert('Passwort erfolgreich geändert.');
+          $('loginModal').style.display = 'none';
+          updateCredentialsDisplay();
+        } else {
+          alert('Ungültiger Verifizierungscode.');
+        }
+      } catch (e) {
+        console.error('Reset Password Error:', e);
+      }
+    };
+
+    const sendToLibrary = (orderId, button) => {
+      try {
+        const order = state.orders.find(o => o.id === orderId);
+        if (order && !state.library.some(o => o.id === orderId)) {
+          state.library.push({ ...order });
+          saveState();
+          alert(`Bestellung ${orderId} in die Bibliothek gesendet!`);
+          renderOrders();
+          wiggle(button);
+        } else {
+          alert(`Bestellung ${orderId} ist bereits in der Bibliothek oder existiert nicht.`);
+        }
+      } catch (e) {
+        console.error('Send to Library Error:', e);
+      }
+    };
+
+    const downloadOrderPDF = (orderId, button) => {
+      try {
+        const order = state.library.find(o => o.id === orderId);
+        if (order) {
+          const productDetails = order.productIds.map((id, index) => {
+            const product = state.products.find(p => p.id === id);
+            return `${product?.title || 'Unbekannt'} (x${order.quantities[index]}, ${product?.price || '0,00 €'})`;
+          }).join('<br>');
+          const paymentInfo = order.paymentMethod === 'credit-card'
+            ? `Kartenummer: ${order.paymentDetails.cardNumber}<br>Ablaufdatum: ${order.paymentDetails.cardExpiry}<br>CVV: ${order.paymentDetails.cardCvv}`
+            : `PayPal E-Mail: ${order.paymentDetails.paypalEmail}`;
+          const element = document.createElement('div');
+          element.innerHTML = `
+            <h2>Bestellung ${order.id}</h2>
+            <p><strong>Produkte:</strong><br>${productDetails}</p>
+            <p><strong>Gesamt:</strong> ${order.amount}</p>
+            <p><strong>Datum:</strong> ${order.date}</p>
+            <p><strong>Lieferadresse:</strong> ${order.address}</p>
+            <p><strong>Zahlungsmethode:</strong> ${order.paymentMethod}</p>
+            <p><strong>Zahlungsdetails:</strong><br>${paymentInfo}</p>
+          `;
+          element.style.padding = '20px';
+          element.style.backgroundColor = '#fff';
+          element.style.fontFamily = 'Arial, sans-serif';
+          html2pdf()
+            .from(element)
+            .set({
+              margin: 1,
+              filename: `Bestellung_${order.id}.pdf`,
+              html2canvas: { scale: 2 },
+              jsPDF: { orientation: 'portrait' }
+            })
+            .save();
+          wiggle(button);
+        }
+      } catch (e) {
+        console.error('Download Order PDF Error:', e);
+      }
+    };
+
+    const sendToPrintify = (orderId, button) => {
+      try {
+        const order = state.orders.find(o => o.id === orderId);
+        if (order) {
+          const productDetails = order.productIds.map((id, index) => {
+            const product = state.products.find(p => p.id === id);
+            return `${product?.title || 'Unbekannt'} (x${order.quantities[index]}, ${product?.price || '0,00 €'})`;
+          }).join(', ');
+          const paymentInfo = order.paymentMethod === 'credit-card'
+            ? `Kartenummer: ${order.paymentDetails.cardNumber}, Ablaufdatum: ${order.paymentDetails.cardExpiry}, CVV: ${order.paymentDetails.cardCvv}`
+            : `PayPal E-Mail: ${order.paymentDetails.paypalEmail}`;
+          alert(`Bestellung ${orderId} an Printify-API gesendet!\nDetails:\nProdukte: ${productDetails}\nGesamt: ${order.amount}\nLieferadresse: ${order.address}\nZahlungsmethode: ${order.paymentMethod}\nZahlungsdetails: ${paymentInfo}`);
+          wiggle(button);
+        }
+      } catch (e) {
+        console.error('Send to Printify Error:', e);
+      }
+    };
+
+    const hideCookieBanner = () => {
+      try {
+        const banner = $('cookieBanner');
+        if (banner) banner.style.display = 'none';
+      } catch (e) {
+        console.error('Hide Cookie Banner Error:', e);
+      }
+    };
+
+    // Section Navigation
+    const showSection = (section) => {
+      try {
+        document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+        if (section === 'settings' && state.user.type !== 'admin') {
+          alert('Nur Admins können Einstellungen anzeigen.');
+          return;
+        }
+        const sectionEl = $(`${section}-section`);
+        if (sectionEl) sectionEl.classList.remove('hidden');
+        if (section === 'home') {
+          renderCategories();
+          renderFeaturedProduct();
+          renderProducts();
+        } else if (section === 'settings') {
+          renderCategoryList();
+          updateProductCategorySelect();
+          showSettingsSection('general', $('settingsGeneralBtn'));
+        } else if (section === 'cart') {
+          renderCart();
+        }
+      } catch (e) {
+        console.error('Show Section Error:', e);
+      }
+    };
+
+    // Settings Section
+    const showSettingsSection = (section, button) => {
+      try {
+        document.querySelectorAll('.settings-content').forEach(c => c.classList.add('hidden'));
+        const content = $(`settings-${section}`);
+        if (content) content.classList.remove('hidden');
+        document.querySelectorAll('.settings-menu-btn').forEach(btn => {
+          btn.className = 'settings-menu-btn bg-gray-300 text-black px-4 py-2 rounded-full hover:bg-gray-400 transition';
+        });
+        if (button) {
+          button.className = 'settings-menu-btn bg-[#007bff] text-white px-4 py-2 rounded-full hover:bg-blue-600 transition';
+          wiggle(button);
+        }
+        if (section === 'orders') {
+          renderOrders();
+          updateCredentialsDisplay();
+        }
+      } catch (e) {
+        console.error('Show Settings Section Error:', e);
+      }
+    };
+
+    // Payment Fields
+    const updatePaymentFields = () => {
+      try {
+        const method = $('payment-method')?.value;
+        const paymentDetails = $('payment-details');
+        if (!paymentDetails) return;
+        paymentDetails.innerHTML = '';
+        if (method === 'credit-card') {
+          paymentDetails.innerHTML = `
+            <input type="text" id="card-number" placeholder="Kartenummer" class="w-full p-3 border rounded-xl mb-2" required>
+            <input type="text" id="card-expiry" placeholder="Ablaufdatum (MM/JJ)" class="w-full p-3 border rounded-xl mb-2" required>
+            <input type="text" id="card-cvv" placeholder="CVV" class="w-full p-3 border rounded-xl mb-2" required>
+          `;
+        } else if (method === 'paypal') {
+          paymentDetails.innerHTML = `
+            <input type="email" id="paypal-email" placeholder="PayPal E-Mail" class="w-full p-3 border rounded-xl mb-2" required>
+          `;
+        }
+      } catch (e) {
+        console.error('Update Payment Fields Error:', e);
+      }
+    };
+
+    // Render Functions
+    const renderCategories = () => {
+      try {
+        const buttons = $('category-buttons');
+        if (!buttons) return;
+        buttons.innerHTML = '';
+        const allBtn = document.createElement('button');
+        allBtn.className = 'category-btn bg-[#007bff] text-white px-6 py-3 rounded-full hover:bg-blue-600 transition';
+        allBtn.dataset.category = 'all';
+        allBtn.textContent = 'Alle';
+        allBtn.addEventListener('click', () => filterProducts('all', allBtn));
+        buttons.appendChild(allBtn);
+        state.categories.forEach(category => {
+          const btn = document.createElement('button');
+          btn.className = 'category-btn bg-gray-300 text-black px-6 py-3 rounded-full hover:bg-gray-400 transition';
+          btn.dataset.category = category;
+          btn.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+          btn.addEventListener('click', () => filterProducts(category, btn));
+          buttons.appendChild(btn);
+        });
+      } catch (e) {
+        console.error('Render Categories Error:', e);
+      }
+    };
+
+    const renderFeaturedProduct = () => {
+      try {
+        const featured = $('featured-product');
+        if (!featured) return;
+        if (!state.settings.featuredProductEnabled) {
+          featured.parentElement.style.display = 'none';
+          return;
+        }
+        featured.parentElement.style.display = 'block';
+        const activeProducts = state.products.filter(p => p.active);
+        if (activeProducts.length === 0) {
+          featured.innerHTML = '<p class="text-center">Kein Produkt verfügbar.</p>';
+          return;
+        }
+        const product = activeProducts[activeProducts.length - 1];
+        featured.innerHTML = `
+          <img src="${product.image}" alt="${product.title}" class="w-full md:w-1/2 h-64 object-cover rounded-xl mb-4 md:mb-0 md:mr-6" onclick="wiggle(this)">
+          <div class="flex-1 text-center md:text-left">
+            <h3 class="text-xl font-semibold">${product.title}</h3>
+            <p class="text-lg mb-4">${product.price}</p>
+            <button class="add-to-cart-btn bg-[#28a745] text-white px-6 py-2 rounded-full hover:bg-green-600 transition" data-id="${product.id}">Warenkorb hinzufügen</button>
+          </div>
+        `;
+        document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+          btn.addEventListener('click', () => addToCart(btn.dataset.id, btn));
+        });
+      } catch (e) {
+        console.error('Render Featured Product Error:', e);
+      }
+    };
+
+    const filterProducts = (category, button) => {
+      try {
+        document.querySelectorAll('#category-buttons .category-btn').forEach(btn => {
+          btn.className = 'category-btn bg-gray-300 text-black px-6 py-3 rounded-full hover:bg-gray-400 transition';
+        });
+        button.className = 'category-btn bg-[#007bff] text-white px-6 py-3 rounded-full hover:bg-blue-600 transition';
+        wiggle(button);
+        const products = $('products');
+        if (!products) return;
+        products.innerHTML = '';
+        state.products.forEach(product => {
+          if ((category === 'all' || product.category === category) && product.active) {
+            const div = document.createElement('div');
+            div.className = 'product-card bg-white p-6 rounded-2xl shadow-lg text-center';
+            div.dataset.category = product.category;
+            div.innerHTML = `
+              <img src="${product.image}" alt="${product.title}" class="w-full h-48 object-cover rounded-xl mb-4">
+              <h3 class="text-xl font-semibold">${product.title}</h3>
+              <p class="text-lg">${product.price}</p>
+            `;
+            div.addEventListener('click', () => showProduct(product.id, div));
+            products.appendChild(div);
+          }
+        });
+      } catch (e) {
+        console.error('Filter Products Error:', e);
+      }
+    };
+
+    const renderProducts = () => filterProducts('all', document.querySelector('#category-buttons [data-category="all"]'));
+
+    const showProduct = (productId, element) => {
+      try {
+        wiggle(element);
+        const product = state.products.find(p => p.id === productId);
+        if (product) {
+          const details = $('product-details');
+          if (details) {
+            details.innerHTML = `
+              <img src="${product.image}" alt="${product.title}" class="w-full md:w-1/2 h-64 object-cover rounded-xl mb-4 md:mb-0 md:mr-6">
+              <div class="flex-1">
+                <h2 class="text-2xl font-bold mb-2">${product.title}</h2>
+                <p class="text-lg mb-4">${product.price}</p>
+                <button class="add-to-cart-btn bg-[#28a745] text-white px-6 py-3 rounded-full hover:bg-green-600 transition w-full" data-id="${product.id}">In den Warenkorb</button>
+              </div>
+            `;
+            document.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+              btn.addEventListener('click', () => addToCart(btn.dataset.id, btn));
+            });
+            showSection('product');
+          }
+        }
+      } catch (e) {
+        console.error('Show Product Error:', e);
+      }
+    };
+
+    const addToCart = (productId, button) => {
+      try {
+        state.cart.push(productId);
+        state.cartCount++;
+        const cartBtn = $('cart-button');
+        if (cartBtn) cartBtn.textContent = `Warenkorb (${state.cartCount})`;
+        saveState();
+        wiggle(button);
+      } catch (e) {
+        console.error('Add to Cart Error:', e);
+      }
+    };
+
+    const renderCart = () => {
+      try {
+        const cartItems = $('cart-items');
+        if (!cartItems) return;
+        cartItems.innerHTML = '';
+        if (state.cart.length === 0) {
+          cartItems.innerHTML = '<p class="text-center">Der Warenkorb ist leer.</p>';
+          return;
+        }
+        const productCounts = {};
+        state.cart.forEach(id => productCounts[id] = (productCounts[id] || 0) + 1);
+        Object.entries(productCounts).forEach(([id, quantity]) => {
+          const product = state.products.find(p => p.id === id);
+          if (product) {
+            const div = document.createElement('div');
+            div.className = 'flex justify-between items-center mb-4';
+            div.innerHTML = `
+              <div>
+                <h3 class="text-lg font-semibold">${product.title} (x${quantity})</h3>
+                <p>${product.price}</p>
+              </div>
+              <button class="remove-from-cart-btn bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 transition" data-id="${id}">Löschen</button>
+            `;
+            cartItems.appendChild(div);
+          }
+        });
+        document.querySelectorAll('.remove-from-cart-btn').forEach(btn => {
+          btn.addEventListener('click', () => removeFromCart(btn.dataset.id, btn));
+        });
+      } catch (e) {
+        console.error('Render Cart Error:', e);
+      }
+    };
+
+    const removeFromCart = (productId, button) => {
+      try {
+        const index = state.cart.indexOf(productId);
+        if (index !== -1) {
+          state.cart.splice(index, 1);
+          state.cartCount--;
+          const cartBtn = $('cart-button');
+          if (cartBtn) cartBtn.textContent = `Warenkorb (${state.cartCount})`;
+          saveState();
+          renderCart();
+          wiggle(button);
+        }
+      } catch (e) {
+        console.error('Remove from Cart Error:', e);
+      }
+    };
+
+    const completeOrder = () => {
+      try {
+        const method = $('payment-method')?.value;
+        const address = $('address')?.value;
+        const city = $('city')?.value;
+        const zip = $('zip')?.value;
+        let paymentDetails = {};
+        let isValid = true;
+
+        if (method === 'credit-card') {
+          const cardNumber = $('card-number')?.value;
+          const cardExpiry = $('card-expiry')?.value;
+          const cardCvv = $('card-cvv')?.value;
+          if (cardNumber && cardExpiry && cardCvv) {
+            paymentDetails = { cardNumber, cardExpiry, cardCvv };
+          } else {
+            isValid = false;
+          }
+        } else if (method === 'paypal') {
+          const paypalEmail = $('paypal-email')?.value;
+          if (paypalEmail) {
+            paymentDetails = { paypalEmail };
+          } else {
+            isValid = false;
+          }
+        }
+
+        if (address && city && zip && isValid) {
+          const orderId = `order-${Date.now()}`;
+          const productCounts = {};
+          state.cart.forEach(id => productCounts[id] = (productCounts[id] || 0) + 1);
+          const productIds = Object.keys(productCounts);
+          const quantities = Object.values(productCounts);
+          const totalAmount = productIds.reduce((sum, id, index) => {
+            const product = state.products.find(p => p.id === id);
+            return sum + parseFloat(product.price.replace(',', '.')) * quantities[index];
+          }, 0).toFixed(2).replace('.', ',');
+          state.orders.push({
+            id: orderId,
+            productIds,
+            quantities,
+            date: new Date().toISOString().split('T')[0],
+            amount: `${totalAmount} €`,
+            address: `${address}, ${city}, ${zip}`,
+            paymentMethod: method,
+            paymentDetails
+          });
+          state.cart = [];
+          state.cartCount = 0;
+          const cartBtn = $('cart-button');
+          if (cartBtn) cartBtn.textContent = `Warenkorb (0)`;
+          saveState();
+          alert(`Bestellung ${orderId} abgeschlossen!`);
+          showSection('home');
+          wiggle($('completeOrderBtn'));
+        } else {
+          alert('Bitte alle Felder ausfüllen.');
+        }
+      } catch (e) {
+        console.error('Complete Order Error:', e);
+      }
+    };
+
+    const addCategory = () => {
+      try {
+        const category = $('category-input')?.value.trim().toLowerCase();
+        if (category && !state.categories.includes(category)) {
+          state.categories.push(category);
+          saveState();
+          renderCategoryList();
+          updateProductCategorySelect();
+          $('category-input').value = '';
+          wiggle($('addCategoryBtn'));
+        }
+      } catch (e) {
+        console.error('Add Category Error:', e);
+      }
+    };
+
+    const renderCategoryList = () => {
+      try {
+        const list = $('category-list');
+        if (!list) return;
+        list.innerHTML = '';
+        state.categories.forEach(category => {
+          const li = document.createElement('li');
+          li.className = 'p-2 bg-gray-100 rounded-xl mb-1';
+          li.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+          list.appendChild(li);
+        });
+      } catch (e) {
+        console.error('Render Category List Error:', e);
+      }
+    };
+
+    const addProduct = () => {
+      try {
+        const category = $('product-category')?.value;
+        const title = $('product-title')?.value.trim();
+        const price = $('product-price')?.value.trim();
+        const image = $('product-image')?.files[0] ? URL.createObjectURL($('product-image').files[0]) : null;
+        if (title && price && category && image) {
+          const id = title.toLowerCase().replace(/\s+/g, '-');
+          state.products.push({ id, category, title, price, image, active: true });
+          state.settings.featuredProductEnabled = true;
+          saveState();
+          $('product-title').value = '';
+          $('product-price').value = '';
+          $('product-image').value = '';
+          alert(`Produkt "${title}" hinzugefügt!`);
+          wiggle($('addProductBtn'));
+          renderProducts();
+          renderFeaturedProduct();
+        } else {
+          alert('Alle Felder ausfüllen und Bild hochladen.');
+        }
+      } catch (e) {
+        console.error('Add Product Error:', e);
+      }
+    };
+
+    const updateProductCategorySelect = () => {
+      try {
+        const select = $('product-category');
+        if (!select) return;
+        select.innerHTML = '';
+        state.categories.forEach(category => {
+          const option = document.createElement('option');
+          option.value = category;
+          option.textContent = category.charAt(0).toUpperCase() + category.slice(1);
+          select.appendChild(option);
+        });
+      } catch (e) {
+        console.error('Update Product Category Select Error:', e);
+      }
+    };
+
+    const renderOrders = () => {
+      try {
+        const list = $('orders-list');
+        const libraryList = $('library-list');
+        if (!list || !libraryList) return;
+        list.innerHTML = '';
+        state.orders.forEach(order => {
+          const productTitles = order.productIds.map((id, index) => {
+            const product = state.products.find(p => p.id === id);
+            return `${product?.title || 'Unbekannt'} (x${order.quantities[index]})`;
+          }).join(', ');
+          const li = document.createElement('li');
+          li.className = 'mb-2 flex justify-between items-center cursor-pointer hover:bg-gray-100 p-2 rounded';
+          li.innerHTML = `
+            <span class="order-details" data-id="${order.id}">Bestellung ${order.id} (${productTitles}, ${order.amount}, ${order.date})</span>
+            <div>
+              <button class="send-to-library-btn bg-[#28a745] text-white px-2 py-1 rounded-full hover:bg-green-600 transition mr-2" data-id="${order.id}">In Bibliothek</button>
+              <button class="send-to-printify-btn bg-blue-500 text-white px-2 py-1 rounded-full hover:bg-blue-600 transition mr-2" data-id="${order.id}">An Printify</button>
+              <button class="delete-order-btn bg-red-500 text-white px-2 py-1 rounded-full hover:bg-red-600 transition" data-id="${order.id}">Löschen</button>
+            </div>
+          `;
+          list.appendChild(li);
+        });
+        libraryList.innerHTML = '';
+        state.library.forEach(order => {
+          const productTitles = order.productIds.map((id, index) => {
+            const product = state.products.find(p => p.id === id);
+            return `${product?.title || 'Unbekannt'} (x${order.quantities[index]})`;
+          }).join(', ');
+          const li = document.createElement('li');
+          li.className = 'mb-2 flex justify-between items-center cursor-pointer hover:bg-gray-100 p-2 rounded';
+          li.innerHTML = `
+            <span>Bestellung ${order.id} (${productTitles}, ${order.amount}, ${order.date})</span>
+            <button class="download-pdf-btn bg-blue-500 text-white px-2 py-1 rounded-full hover:bg-blue-600 transition" data-id="${order.id}">PDF herunterladen</button>
+          `;
+          libraryList.appendChild(li);
+        });
+        document.querySelectorAll('.order-details').forEach(span => {
+          span.addEventListener('click', () => showOrderDetails(span.dataset.id, span));
+        });
+        document.querySelectorAll('.delete-order-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteOrder(btn.dataset.id, btn);
+          });
+        });
+        document.querySelectorAll('.send-to-library-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sendToLibrary(btn.dataset.id, btn);
+          });
+        });
+        document.querySelectorAll('.send-to-printify-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sendToPrintify(btn.dataset.id, btn);
+          });
+        });
+        document.querySelectorAll('.download-pdf-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            downloadOrderPDF(btn.dataset.id, btn);
+          });
+        });
+      } catch (e) {
+        console.error('Render Orders Error:', e);
+      }
+    };
+
+    const showOrderDetails = (orderId, element) => {
+      try {
+        wiggle(element);
+        const order = state.orders.find(o => o.id === orderId);
+        if (order) {
+          const productDetails = order.productIds.map((id, index) => {
+            const product = state.products.find(p => p.id === id);
+            return `${product?.title || 'Unbekannt'} (x${order.quantities[index]}, ${product?.price || '0,00 €'})`;
+          }).join('<br>');
+          const paymentInfo = order.paymentMethod === 'credit-card'
+            ? `Kartenummer: ${order.paymentDetails.cardNumber}<br>Ablaufdatum: ${order.paymentDetails.cardExpiry}<br>CVV: ${order.paymentDetails.cardCvv}`
+            : `PayPal E-Mail: ${order.paymentDetails.paypalEmail}`;
+          const detailsContent = $('order-details-content');
+          if (detailsContent) {
+            detailsContent.innerHTML = `
+              <p><strong>Bestellung:</strong> ${order.id}</p>
+              <p><strong>Produkte:</strong><br>${productDetails}</p>
+              <p><strong>Gesamt:</strong> ${order.amount}</p>
+              <p><strong>Datum:</strong> ${order.date}</p>
+              <p><strong>Adresse:</strong> ${order.address}</p>
+              <p><strong>Zahlung:</strong> ${order.paymentMethod}</p>
+              <p><strong>Details:</strong><br>${paymentInfo}</p>
+            `;
+            const details = $('order-details');
+            if (details) details.classList.remove('hidden');
+          }
+        }
+      } catch (e) {
+        console.error('Show Order Details Error:', e);
+      }
+    };
+
+    const deleteOrder = (orderId, button) => {
+      try {
+        const index = state.orders.findIndex(o => o.id === orderId);
+        if (index !== -1) {
+          state.orders.splice(index, 1);
+          saveState();
+          renderOrders();
+          wiggle(button);
+        }
+      } catch (e) {
+        console.error('Delete Order Error:', e);
+      }
+    };
+
+    const saveSettings = () => {
+      try {
+        state.settings.shopName = $('shop-name')?.value || 'Streetstyle';
+        const bannerInput = $('banner-image-upload');
+        if (bannerInput?.files[0]) state.settings.banner = URL.createObjectURL(bannerInput.files[0]);
+        saveState();
+        updateHeader();
+        updateWelcomeText();
+        updateBanner();
+        renderCategories();
+        renderFeaturedProduct();
+        renderProducts();
+        alert('Einstellungen gespeichert!');
+        wiggle($('saveSettingsBtn'));
+        showSection('home');
+      } catch (e) {
+        console.error('Save Settings Error:', e);
+      }
+    };
+
+    const updateHeader = () => {
+      const header = $('shop-name-header');
+      if (header) header.textContent = state.settings.shopName;
+    };
+
+    const updateWelcomeText = () => {
+      const welcome = $('welcome-text');
+      if (welcome) welcome.innerHTML = `Willkommen bei <span class="text-4xl">${state.settings.shopName.toUpperCase()}</span>!`;
+    };
+
+    const updateBanner = () => {
+      const banner = $('banner-image');
+      if (banner) banner.src = state.settings.banner;
+    };
+
+    // Event Listeners
+    const bindEventListeners = () => {
+      try {
+        // Header
+        const homeLink = $('home-link');
+        if (homeLink) homeLink.addEventListener('click', (e) => { e.preventDefault(); showSection('home'); });
+
+        const settingsLink = $('settings-link');
+        if (settingsLink) settingsLink.addEventListener('click', (e) => { e.preventDefault(); showSection('settings'); });
+
+        const cartBtn = $('cart-button');
+        if (cartBtn) cartBtn.addEventListener('click', () => { wiggle(cartBtn); showSection('cart'); });
+
+        const loginBtn = $('login-btn');
+        if (loginBtn) loginBtn.addEventListener('click', openLoginModal);
+
+        // Login Modal
+        const closeModal = $('closeLoginModal');
+        if (closeModal) closeModal.addEventListener('click', setGuestMode);
+
+        const adminOption = $('adminLoginOption');
+        if (adminOption) adminOption.addEventListener('click', showAdminLogin);
+
+        const customerOption = $('customerLoginOption');
+        if (customerOption) customerOption.addEventListener('click', showCustomerLogin);
+
+        const guestOption = $('guestModeOption');
+        if (guestOption) guestOption.addEventListener('click', setGuestMode);
+
+        const adminLoginForm = $('adminLoginForm');
+        if (adminLoginForm) adminLoginForm.addEventListener('submit', requestAdminCode);
+
+        const adminVerifyForm = $('adminVerifyForm');
+        if (adminVerifyForm) adminVerifyForm.addEventListener('submit', verifyAdmin);
+
+        const customerLoginForm = $('customerLoginForm');
+        if (customerLoginForm) customerLoginForm.addEventListener('submit', requestCustomerCode);
+
+        const customerVerifyForm = $('customerVerifyForm');
+        if (customerVerifyForm) customerVerifyForm.addEventListener('submit', verifyCustomer);
+
+        const passwordResetForm = $('adminPasswordResetForm');
+        if (passwordResetForm) passwordResetForm.addEventListener('submit', resetPassword);
+
+        // Cookie Banner
+        const cookieBtn = $('cookieOkBtn');
+        if (cookieBtn) cookieBtn.addEventListener('click', hideCookieBanner);
+
+        // Settings
+        const generalBtn = $('settingsGeneralBtn');
+        if (generalBtn) generalBtn.addEventListener('click', () => showSettingsSection('general', generalBtn));
+
+        const productsBtn = $('settingsProductsBtn');
+        if (productsBtn) productsBtn.addEventListener('click', () => showSettingsSection('products', productsBtn));
+
+        const ordersBtn = $('settingsOrdersBtn');
+        if (ordersBtn) ordersBtn.addEventListener('click', () => showSettingsSection('orders', ordersBtn));
+
+        const addProductBtn = $('addProductBtn');
+        if (addProductBtn) addProductBtn.addEventListener('click', addProduct);
+
+        const addCategoryBtn = $('addCategoryBtn');
+        if (addCategoryBtn) addCategoryBtn.addEventListener('click', addCategory);
+
+        const generateKeyBtn = $('generateKeyBtn');
+        if (generateKeyBtn) generateKeyBtn.addEventListener('click', generateKey);
+
+        const togglePasswordBtn = $('togglePasswordBtn');
+        if (togglePasswordBtn) togglePasswordBtn.addEventListener('click', togglePasswordVisibility);
+
+        const toggleKeyBtn = $('toggleKeyBtn');
+        if (toggleKeyBtn) toggleKeyBtn.addEventListener('click', toggleKeyVisibility);
+
+        const changePasswordBtn = $('changePasswordBtn');
+        if (changePasswordBtn) changePasswordBtn.addEventListener('click', changePassword);
+
+        const changeKeyBtn = $('changeKeyBtn');
+        if (changeKeyBtn) changeKeyBtn.addEventListener('click', changeKey);
+
+        const forgotPasswordBtn = $('forgotPasswordBtn');
+        if (forgotPasswordBtn) forgotPasswordBtn.addEventListener('click', forgotPassword);
+
+        const saveSettingsBtn = $('saveSettingsBtn');
+        if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', saveSettings);
+
+        // Cart & Checkout
+        const checkoutBtn = $('checkoutBtn');
+        if (checkoutBtn) checkoutBtn.addEventListener('click', () => { wiggle(checkoutBtn); showSection('checkout'); });
+
+        const completeOrderBtn = $('completeOrderBtn');
+        if (completeOrderBtn) completeOrderBtn.addEventListener('click', completeOrder);
+
+        const paymentMethod = $('payment-method');
+        if (paymentMethod) paymentMethod.addEventListener('change', updatePaymentFields);
+
+        // Inputs
+        ['category-input', 'product-title', 'product-price'].forEach(id => {
+          const input = $(id);
+          if (input) {
+            input.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (id === 'category-input') addCategory();
+                else addProduct();
+              }
+            });
+          }
+        });
+      } catch (e) {
+        console.error('Bind Event Listeners Error:', e);
+      }
+    };
+
+    // Initialize
+    const init = () => {
+      try {
+        const userType = localStorage.getItem('userType');
+        state.user.adminEmail = localStorage.getItem('adminEmail') || state.user.adminEmail;
+        state.user.customerEmail = localStorage.getItem('customerEmail') || state.user.customerEmail;
+        state.user.adminPassword = localStorage.getItem('adminPassword') || state.user.adminPassword;
+        state.user.adminKey = localStorage.getItem('adminKey') || state.user.adminKey;
+        if (userType === 'admin') {
+          state.user.type = 'admin';
+          const indicator = $('adminIndicator');
+          if (indicator) indicator.style.display = 'block';
+          const loginBtn = $('login-btn');
+          if (loginBtn) loginBtn.style.display = 'none';
+          const userProfile = $('userProfile');
+          if (userProfile) userProfile.style.display = 'none';
+        } else if (userType === 'customer') {
+          state.user.type = 'customer';
+          const initial = state.user.customerEmail?.charAt(0)?.toUpperCase() || 'C';
+          const userProfile = $('userProfile');
+          if (userProfile) {
+            userProfile.textContent = initial;
+            userProfile.style.display = 'block';
+          }
+          const loginBtn = $('login-btn');
+          if (loginBtn) loginBtn.style.display = 'none';
+          const indicator = $('adminIndicator');
+          if (indicator) indicator.style.display = 'none';
+        } else {
+          state.user.type = 'guest';
+          const loginBtn = $('login-btn');
+          if (loginBtn) loginBtn.style.display = 'block';
+          const indicator = $('adminIndicator');
+          if (indicator) indicator.style.display = 'none';
+          const userProfile = $('userProfile');
+          if (userProfile) userProfile.style.display = 'none';
+        }
+        bindEventListeners();
+        showSection('home');
+        updateHeader();
+        updateWelcomeText();
+        updateBanner();
+        updatePaymentFields();
+      } catch (e) {
+        console.error('Init Error:', e);
+      }
+    };
+
+    init();
+  </script>
+</body>
+</html>
