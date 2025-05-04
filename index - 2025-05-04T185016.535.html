@@ -1,0 +1,697 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Publishing Platform</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.22.10/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background-color: #111827; /* Fallback background color (gray-900) */
+      color: #ffffff; /* Default text color */
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // Mock Lulu API
+    const luluApi = {
+      uploadBook: async (bookData, file) => {
+        console.log('Uploading to Lulu:', bookData, file);
+        return { id: 'lulu-123', status: 'submitted' };
+      },
+      submitOrder: async (bookId, orderDetails) => {
+        console.log('Submitting order to Lulu:', bookId, orderDetails);
+        return { orderId: 'order-456', status: 'processing' };
+      },
+      getOrderStatus: async (orderId) => {
+        console.log('Fetching order status:', orderId);
+        return { orderId, status: 'shipped' };
+      }
+    };
+
+    // Mock Stripe API
+    const stripeApi = {
+      createAccount: async () => {
+        console.log('Creating Stripe Express Account');
+        return { id: `acct_${Math.random().toString(36).substr(2, 9)}` }; // Mock account_id
+      },
+      createAccountLink: async (accountId) => {
+        console.log('Creating Stripe Account Link for:', accountId);
+        return { url: `https://connect.stripe.com/express/onboarding/${accountId}` }; // Mock URL
+      },
+      createPaymentIntent: async (amount, currency, applicationFee, destination) => {
+        console.log('Creating PaymentIntent:', { amount, currency, applicationFee, destination });
+        return { id: `pi_${Math.random().toString(36).substr(2, 9)}`, status: 'succeeded' }; // Mock PaymentIntent
+      }
+    };
+
+    // Mock database for storing Stripe account IDs
+    const stripeAccounts = [];
+
+    // Mock book data (for demonstration purposes)
+    const allBooks = [
+      { id: '1', title: 'Sample Book 1', author: 'John Doe', description: 'A great book', price: 19.99, cover: null },
+      { id: '2', title: 'Sample Book 2', author: 'John Doe', description: 'Another great book', price: 24.99, cover: null },
+      { id: '3', title: 'Sample Book 3', author: 'Jane Smith', description: 'A fantastic read', price: 29.99, cover: null }
+    ];
+
+    // Language translations
+    const translations = {
+      en: {
+        home: 'Home',
+        dashboard: 'Dashboard',
+        myBooks: 'My Published Books',
+        profile: 'Settings',
+        login: 'Login',
+        logout: 'Logout',
+        bookShop: 'Book Shop',
+        searchPlaceholder: 'Search by title or author',
+        createBook: 'Create New Book',
+        title: 'Title',
+        author: 'Author',
+        description: 'Description',
+        price: 'Price',
+        format: 'Format',
+        paperback: 'Paperback',
+        hardcover: 'Hardcover',
+        ebook: 'eBook',
+        preview: 'Preview',
+        myBooksSection: 'My Books',
+        status: 'Status',
+        guest: 'Guest',
+        booksBy: 'Books by',
+        noBooks: 'No books found for this author.',
+        updateProfile: 'Update Settings',
+        paymentDetails: 'Payment Details',
+        connectStripe: 'Connect with Stripe',
+        selectLanguage: 'Select Language',
+        buyNow: 'Buy Now',
+        selectAnimalIcon: 'Select Animal Icon'
+      },
+      de: {
+        home: 'Startseite',
+        dashboard: 'Dashboard',
+        myBooks: 'Meine veröffentlichten Bücher',
+        profile: 'Einstellungen',
+        login: 'Anmelden',
+        logout: 'Abmelden',
+        bookShop: 'Buchladen',
+        searchPlaceholder: 'Suche nach Titel oder Autor',
+        createBook: 'Neues Buch erstellen',
+        title: 'Titel',
+        author: 'Autor',
+        description: 'Beschreibung',
+        price: 'Preis',
+        format: 'Format',
+        paperback: 'Taschenbuch',
+        hardcover: 'Gebundene Ausgabe',
+        ebook: 'eBook',
+        preview: 'Vorschau',
+        myBooksSection: 'Meine Bücher',
+        status: 'Status',
+        guest: 'Gast',
+        booksBy: 'Bücher von',
+        noBooks: 'Keine Bücher für diesen Autor gefunden.',
+        updateProfile: 'Einstellungen aktualisieren',
+        paymentDetails: 'Zahlungsdetails',
+        connectStripe: 'Mit Stripe verbinden',
+        selectLanguage: 'Sprache auswählen',
+        buyNow: 'Jetzt kaufen',
+        selectAnimalIcon: 'Tier-Icon auswählen'
+      }
+    };
+
+    // Login Component
+    function Login({ onLogin, language }) {
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [animalIcon, setAnimalIcon] = useState('dog');
+
+      const handleLogin = (e) => {
+        e.preventDefault();
+        if (email && password) {
+          onLogin({ email, role: email.includes('admin') ? 'admin' : 'author', animalIcon });
+        }
+      };
+
+      return (
+        <div className="flex items-center justify-center h-screen bg-gray-900">
+          <div className="bg-gray-800 p-8 rounded-lg shadow-lg w-96">
+            <h2 className="text-2xl font-bold mb-6 text-purple-400">{translations[language].login}</h2>
+            <form onSubmit={handleLogin}>
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full p-2 mb-4 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400"
+                required
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full p-2 mb-4 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400"
+                required
+              />
+              <div className="mb-4">
+                <label className="block text-purple-300 mb-2">{translations[language].selectAnimalIcon}</label>
+                <select
+                  value={animalIcon}
+                  onChange={(e) => setAnimalIcon(e.target.value)}
+                  className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+                >
+                  <option value="dog">🐶 Dog</option>
+                  <option value="cat">🐱 Cat</option>
+                  <option value="fox">🦊 Fox</option>
+                  <option value="bear">🐻 Bear</option>
+                  <option value="penguin">🐧 Penguin</option>
+                </select>
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-purple-500 text-white p-2 rounded hover:bg-purple-600"
+              >
+                {translations[language].login}
+              </button>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // Author Dashboard Component
+    function AuthorDashboard({ user, onLogout, language }) {
+      const [books, setBooks] = useState([]);
+      const [newBook, setNewBook] = useState({
+        title: '',
+        author: '',
+        description: '',
+        price: '',
+        format: 'paperback',
+        file: null,
+        cover: null
+      });
+      const [isDragging, setIsDragging] = useState(false);
+
+      const handleCreateBook = async (e) => {
+        e.preventDefault();
+        const bookData = { ...newBook, status: 'in_progress', author: user.email };
+        const luluResponse = await luluApi.uploadBook(bookData, newBook.file);
+        setBooks([...books, { ...bookData, id: luluResponse.id, status: luluResponse.status }]);
+        allBooks.push({ ...bookData, id: luluResponse.id });
+        setNewBook({ title: '', author: '', description: '', price: '', format: 'paperback', file: null, cover: null });
+      };
+
+      const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const file = e.dataTransfer.files[0];
+        if (file && file.type === 'application/pdf') {
+          setNewBook({ ...newBook, file });
+        }
+      };
+
+      const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragging(true);
+      };
+
+      const handleDragLeave = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+      };
+
+      return (
+        <div className="p-8">
+          <h1 className="text-3xl font-bold mb-6 text-purple-400">{translations[language].dashboard}</h1>
+          <div className="mb-8">
+            <h2 className="text-2xl font-semibold mb-4 text-purple-300">{translations[language].createBook}</h2>
+            <div
+              className={`border-2 border-dashed p-4 mb-4 rounded ${isDragging ? 'border-purple-500 bg-purple-500/20' : 'border-gray-600'}`}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+            >
+              <p className="text-gray-400 text-center">
+                {newBook.file ? `File: ${newBook.file.name}` : 'Drag and drop PDF here or click to upload'}
+              </p>
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => setNewBook({ ...newBook, file: e.target.files[0] })}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white mt-2"
+              />
+            </div>
+            <form onSubmit={handleCreateBook} className="space-y-4">
+              <input
+                type="text"
+                placeholder={translations[language].title}
+                value={newBook.title}
+                onChange={(e) => setNewBook({ ...newBook, title: e.target.value })}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400"
+                required
+              />
+              <input
+                type="text"
+                placeholder={translations[language].author}
+                value={newBook.author}
+                onChange={(e) => setNewBook({ ...newBook, author: e.target.value })}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400"
+                required
+              />
+              <textarea
+                placeholder={translations[language].description}
+                value={newBook.description}
+                onChange={(e) => setNewBook({ ...newBook, description: e.target.value })}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400"
+                required
+              />
+              <input
+                type="number"
+                placeholder={translations[language].price}
+                value={newBook.price}
+                onChange={(e) => setNewBook({ ...newBook, price: e.target.value })}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400"
+                required
+              />
+              <select
+                value={newBook.format}
+                onChange={(e) => setNewBook({ ...newBook, format: e.target.value })}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+              >
+                <option value="paperback">{translations[language].paperback}</option>
+                <option value="hardcover">{translations[language].hardcover}</option>
+                <option value="ebook">{translations[language].ebook}</option>
+              </select>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setNewBook({ ...newBook, cover: e.target.files[0] })}
+                className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+              />
+              <button
+                type="submit"
+                className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
+              >
+                {translations[language].createBook}
+              </button>
+            </form>
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold mb-4 text-purple-300">{translations[language].myBooksSection}</h2>
+            <ul className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {books.map((book) => (
+                <li key={book.id} className="p-4 bg-gray-800 rounded-lg shadow-lg">
+                  <h3 className="text-xl font-bold text-purple-400">{book.title}</h3>
+                  <p className="text-gray-300">{translations[language].author}: {book.author}</p>
+                  <p className="text-gray-300">{translations[language].status}: {book.status}</p>
+                  <button
+                    className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 mt-2"
+                    onClick={() => alert('PDF Preview Placeholder')}
+                  >
+                    {translations[language].preview}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      );
+    }
+
+    // Shop Component (Home)
+    function Shop({ language }) {
+      const [search, setSearch] = useState('');
+
+      const filteredBooks = allBooks.filter((book) =>
+        book.title.toLowerCase().includes(search.toLowerCase()) ||
+        book.author.toLowerCase().includes(search.toLowerCase())
+      );
+
+      return (
+        <div className="p-8">
+          <h1 className="text-4xl font-bold mb-6 text-purple-400">{translations[language].bookShop}</h1>
+          <input
+            type="text"
+            placeholder={translations[language].searchPlaceholder}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full p-2 mb-6 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400"
+          />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {filteredBooks.map((book) => (
+              <div key={book.id} className="p-4 bg-gray-800 rounded-lg shadow-lg">
+                <img
+                  src={book.cover || 'https://via.placeholder.com/150?text=Cover'}
+                  alt="Cover"
+                  className="w-full h-48 object-cover mb-4 rounded"
+                />
+                <h3 className="text-xl font-bold text-purple-400">{book.title}</h3>
+                <p className="text-gray-300">{translations[language].author}: {book.author}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // Product Page Component
+    function ProductPage({ book, language }) {
+      const handlePurchase = async () => {
+        const authorAccount = stripeAccounts.find(acc => acc.authorEmail === book.author);
+        if (!authorAccount) {
+          alert('Author has not connected their Stripe account yet.');
+          return;
+        }
+
+        const amount = Math.round(book.price * 100); // Convert to cents
+        const applicationFee = Math.round(amount * 0.2); // 20% platform fee
+        const response = await stripeApi.createPaymentIntent(
+          amount,
+          'eur',
+          applicationFee,
+          authorAccount.accountId
+        );
+        const luluResponse = await luluApi.submitOrder(book.id, { userId: 'user-123' });
+        alert(`Order placed! Payment Status: ${response.status}, Lulu Order Status: ${luluResponse.status}`);
+      };
+
+      return (
+        <div className="p-8">
+          <h1 className="text-4xl font-bold mb-6 text-purple-400">{book.title}</h1>
+          <div className="flex flex-col md:flex-row gap-6">
+            <div className="md:w-1/3">
+              <img
+                src={book.cover || 'https://via.placeholder.com/300?text=Cover'}
+                alt="Cover"
+                className="w-full h-auto object-cover rounded"
+              />
+            </div>
+            <div className="md:w-2/3">
+              <p className="text-gray-300 mb-2">{translations[language].author}: {book.author}</p>
+              <p className="text-gray-300 mb-4">{book.description}</p>
+              <p className="text-lg font-semibold text-purple-400 mb-4">${book.price}</p>
+              <div className="flex space-x-2">
+                <button
+                  className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
+                  onClick={handlePurchase}
+                >
+                  {translations[language].buyNow}
+                </button>
+                <button
+                  className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
+                  onClick={() => alert('Preview Placeholder')}
+                >
+                  {translations[language].preview}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Author Books Component
+    function AuthorBooks({ authorEmail, language }) {
+      const authorBooks = allBooks.filter((book) => book.author === authorEmail);
+
+      return (
+        <div className="p-8">
+          <h1 className="text-4xl font-bold mb-6 text-purple-400">{translations[language].booksBy} {authorEmail}</h1>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {authorBooks.length > 0 ? (
+              authorBooks.map((book) => (
+                <div key={book.id} className="p-4 bg-gray-800 rounded-lg shadow-lg">
+                  <img
+                    src={book.cover || 'https://via.placeholder.com/150?text=Cover'}
+                    alt="Cover"
+                    className="w-full h-48 object-cover mb-4 rounded"
+                  />
+                  <h3 className="text-xl font-bold text-purple-400">{book.title}</h3>
+                  <p className="text-gray-300">{translations[language].author}: {book.author}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-400">{translations[language].noBooks}</p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Profile Component
+    function Profile({ user, onLogout, language }) {
+      const [profile, setProfile] = useState({
+        name: user.email,
+        image: null,
+        paymentDetails: '',
+        animalIcon: user.animalIcon
+      });
+      const [stripeConnected, setStripeConnected] = useState(false);
+
+      const handleUpdate = (e) => {
+        e.preventDefault();
+        alert('Settings updated!');
+      };
+
+      const handleConnectStripe = async () => {
+        const account = await stripeApi.createAccount();
+        const accountLink = await stripeApi.createAccountLink(account.id);
+        stripeAccounts.push({ authorEmail: user.email, accountId: account.id });
+        setStripeConnected(true);
+        alert(`Please complete Stripe onboarding: ${accountLink.url}`);
+      };
+
+      return (
+        <div className="p-8">
+          <h1 className="text-3xl font-bold mb-6 text-purple-400">{translations[language].profile}</h1>
+          <form onSubmit={handleUpdate} className="space-y-4">
+            <input
+              type="text"
+              placeholder={translations[language].name}
+              value={profile.name}
+              onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+              className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400"
+            />
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setProfile({ ...profile, image: e.target.files[0] })}
+              className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+            />
+            <input
+              type="text"
+              placeholder={translations[language].paymentDetails}
+              value={profile.paymentDetails}
+              onChange={(e) => setProfile({ ...profile, paymentDetails: e.target.value })}
+              className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400"
+            />
+            <button
+              type="button"
+              onClick={handleConnectStripe}
+              className={`w-full p-2 rounded ${stripeConnected ? 'bg-green-500' : 'bg-purple-500'} text-white hover:bg-purple-600`}
+              disabled={stripeConnected}
+            >
+              {stripeConnected ? 'Stripe Connected' : translations[language].connectStripe}
+            </button>
+            <button
+              type="submit"
+              className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
+            >
+              {translations[language].updateProfile}
+            </button>
+          </form>
+        </div>
+      );
+    }
+
+    // Main App Component
+    function App() {
+      const [user, setUser] = useState(null);
+      const [view, setView] = useState('shop');
+      const [selectedAuthor, setSelectedAuthor] = useState(null);
+      const [selectedBook, setSelectedBook] = useState(null);
+      const [language, setLanguage] = useState('en');
+      const [animalIcon, setAnimalIcon] = useState('🐶'); // Default icon
+
+      const handleLogin = (userData) => {
+        setUser(userData);
+        setAnimalIcon(userData.animalIcon);
+        setView(userData.role === 'author' ? 'dashboard' : 'shop');
+      };
+
+      const handleLogout = () => {
+        setUser(null);
+        setAnimalIcon('🐶'); // Reset to default
+        setView('shop');
+      };
+
+      const handleViewAuthorBooks = (authorEmail) => {
+        setSelectedAuthor(authorEmail);
+        setView('authorBooks');
+      };
+
+      const handleViewProduct = (book) => {
+        setSelectedBook(book);
+        setView('product');
+      };
+
+      const handleLanguageChange = (lang) => {
+        setLanguage(lang);
+      };
+
+      return (
+        <div className="flex min-h-screen bg-gray-900">
+          {/* Sidebar */}
+          <div className="w-64 bg-gray-800 p-4 flex flex-col">
+            <div className="flex items-center mb-6">
+              <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center text-2xl font-bold">
+                {user ? animalIcon : 'U'}
+              </div>
+              <div className="ml-4">
+                <p className="text-purple-400 font-bold">{user ? user.email : translations[language].guest}</p>
+              </div>
+            </div>
+            <nav className="flex-1">
+              <ul className="space-y-2">
+                <li>
+                  <button
+                    onClick={() => setView('shop')}
+                    className={`w-full text-left p-2 rounded ${view === 'shop' ? 'bg-purple-500' : 'hover:bg-gray-700'}`}
+                  >
+                    {translations[language].home}
+                  </button>
+                </li>
+                {user && (
+                  <>
+                    <li>
+                      <button
+                        onClick={() => setView('dashboard')}
+                        className={`w-full text-left p-2 rounded ${view === 'dashboard' ? 'bg-purple-500' : 'hover:bg-gray-700'}`}
+                      >
+                        {translations[language].dashboard}
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        onClick={() => handleViewAuthorBooks(user.email)}
+                        className={`w-full text-left p-2 rounded ${view === 'authorBooks' && selectedAuthor === user.email ? 'bg-purple-500' : 'hover:bg-gray-700'}`}
+                      >
+                        {translations[language].myBooks}
+                      </button>
+                    </li>
+                  </>
+                )}
+                {!user && (
+                  <li>
+                    <button
+                      onClick={() => setView('login')}
+                      className={`w-full text-left p-2 rounded ${view === 'login' ? 'bg-purple-500' : 'hover:bg-gray-700'}`}
+                    >
+                      {translations[language].login}
+                    </button>
+                  </li>
+                )}
+                {user && (
+                  <li>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left p-2 rounded hover:bg-gray-700 text-red-400"
+                    >
+                      {translations[language].logout}
+                    </button>
+                  </li>
+                )}
+                <li>
+                  <select
+                    value={language}
+                    onChange={(e) => handleLanguageChange(e.target.value)}
+                    className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+                  >
+                    <option value="en">English</option>
+                    <option value="de">Deutsch</option>
+                  </select>
+                </li>
+                <li>
+                  <button
+                    onClick={() => setView('profile')}
+                    className={`w-full text-left p-2 rounded ${view === 'profile' ? 'bg-purple-500' : 'hover:bg-gray-700'}`}
+                  >
+                    {translations[language].profile}
+                  </button>
+                </li>
+              </ul>
+            </nav>
+          </div>
+          {/* Main Content */}
+          <div className="flex-1">
+            {view === 'login' && <Login onLogin={handleLogin} language={language} />}
+            {view === 'dashboard' && user && <AuthorDashboard user={user} onLogout={handleLogout} language={language} />}
+            {view === 'shop' && <Shop language={language} />}
+            {view === 'authorBooks' && <AuthorBooks authorEmail={selectedAuthor} language={language} />}
+            {view === 'product' && selectedBook && <ProductPage book={selectedBook} language={language} />}
+            {view === 'profile' && user && <Profile user={user} onLogout={handleLogout} language={language} />}
+          </div>
+        </div>
+      );
+    }
+
+    // Render the app with error handling
+    try {
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    } catch (error) {
+      console.error('Error rendering the app:', error);
+      document.getElementById('root').innerHTML = '<div class="text-red-500 p-4">Error loading the application. Please check the console for details.</div>';
+    }
+  </script>
+</body>
+</html>
