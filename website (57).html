@@ -1,0 +1,1429 @@
+
+        <!DOCTYPE html>
+        <html lang="de">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style></style>
+        </head>
+        <body>
+          <!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Streetstyle - Online Shop</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    .wiggle {
+      animation: wiggle 0.3s ease-in-out;
+    }
+    @keyframes wiggle {
+      0% { transform: rotate(0deg) scale(1); }
+      25% { transform: rotate(-3deg) scale(1.05); }
+      50% { transform: rotate(3deg) scale(1.05); }
+      75% { transform: rotate(-3deg) scale(1.05); }
+      100% { transform: rotate(0deg) scale(1); }
+    }
+    .hidden { display: none; }
+    #verification-display {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #28a745;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 0 0 8px 8px;
+      z-index: 1000;
+      display: none;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 font-sans">
+  <!-- Verification Code Display -->
+  <div id="verification-display"></div>
+
+  <!-- Header -->
+  <header class="bg-[#1a2526] text-white py-4 px-6 flex justify-between items-center">
+    <div class="flex items-center space-x-4">
+      <div id="shop-name-header" class="text-2xl font-bold">Streetstyle</div>
+      <a href="#" class="text-[#007bff] hover:underline" onclick="showSection('home')">Home</a>
+    </div>
+    <div class="flex items-center space-x-4">
+      <button id="cart-button" class="bg-[#28a745] text-white px-4 py-2 rounded-full hover:bg-green-600 transition" onclick="wiggle(this); showSection('cart')">Warenkorb (0)</button>
+      <a href="#" class="text-white hover:text-[#007bff] px-4 py-2 rounded-full" onclick="showSection('settings')">Einstellungen</a>
+      <!-- Login-Icon & Dropdown (rechte obere Ecke) -->
+      <div id="login-section">
+        <button id="login-icon" class="text-white px-4 py-2 rounded-full">🔐 Login ▼</button>
+        <div id="login-dropdown" style="display: none; background: #fff; border: 1px solid #ccc; padding: 10px; position: absolute; right: 0; z-index: 10;">
+          <button class="block w-full text-left px-2 py-1 bg-blue-500 text-white hover:bg-blue-600 rounded" onclick="showLoginForm('admin')">Admin</button>
+          <button class="block w-full text-left px-2 py-1 bg-green-500 text-white hover:bg-green-600 rounded mt-1" onclick="showLoginForm('kunde')">Kunde</button>
+          <button class="block w-full text-left px-2 py-1 bg-gray-500 text-white hover:bg-gray-600 rounded mt-1" onclick="guestAccess()">Gast</button>
+          <button class="block w-full text-left px-2 py-1 bg-red-500 text-white hover:bg-red-600 rounded mt-1" onclick="logout()">Ausloggen</button>
+        </div>
+      </div>
+      <!-- Einstellungen-Icon (nur für Admin sichtbar) -->
+      <div id="settings-icon" style="display: none;">
+        <button class="text-white px-4 py-2 rounded-full hover:bg-gray-600" onclick="showSection('settings')">⚙️ Einstellungen</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <!-- Login-Formular -->
+    <div id="login-form" style="display: none; margin: 20px auto; max-width: 300px; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+      <input type="email" id="email" placeholder="E-Mail" class="w-full p-2 mb-2 border rounded-xl"><br>
+      <input type="password" id="password" placeholder="Passwort" class="w-full p-2 mb-2 border rounded-xl"><br>
+      <input type="text" id="admin-key" placeholder="Admin-Schlüssel" style="display: none;" class="w-full p-2 mb-2 border rounded-xl"><br>
+      <input type="text" id="kunde-verification" placeholder="Verifizierungscode" style="display: none;" class="w-full p-2 mb-2 border rounded-xl"><br>
+      <button id="send-verification" class="bg-[#007bff] text-white px-4 py-2 rounded-full hover:bg-blue-600 transition w-full mb-2 hidden" onclick="sendVerificationCode()">Senden</button>
+      <button class="bg-[#28a745] text-white px-4 py-2 rounded-full hover:bg-green-600 transition w-full" onclick="submitLogin()">Einloggen</button>
+    </div>
+
+    <!-- Home Section -->
+    <section id="home-section" class="home-section">
+      <!-- Banner -->
+      <div class="py-8">
+        <div class="container mx-auto px-4">
+          <img id="banner-image" src="https://via.placeholder.com/1200x400?text=Streetstyle+Banner" alt="Streetstyle Banner" class="w-full h-64 object-cover rounded-2xl">
+        </div>
+      </div>
+      <!-- Welcome Text -->
+      <div class="text-center py-8">
+        <h1 id="welcome-text" class="text-4xl font-bold">Willkommen bei <span class="text-4xl">STREETSTYLE</span> – jetzt unsere Kollektion entdecken!</h1>
+      </div>
+      <!-- Categories -->
+      <div class="container mx-auto px-4 py-8">
+        <div id="category-buttons" class="flex justify-center space-x-4"></div>
+      </div>
+      <!-- Featured Product Card -->
+      <div class="container mx-auto px-4 py-8">
+        <h3 class="text-2xl font-bold text-center mb-4">Empfohlenes Produkt</h3>
+        <div id="featured-product" class="bg-white p-6 rounded-2xl shadow-lg max-w-2xl mx-auto flex flex-col md:flex-row"></div>
+      </div>
+      <!-- Product Cards -->
+      <div id="products" class="container mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+      <!-- Custom Card -->
+      <div class="container mx-auto px-4 py-8">
+        <h3 id="custom-card-section-title" class="text-2xl font-bold text-center mb-4">Unsere Marke</h3>
+        <div id="custom-card" class="bg-white p-6 rounded-2xl shadow-lg max-w-2xl mx-auto flex flex-col md:flex-row"></div>
+      </div>
+    </section>
+
+    <!-- Settings Section -->
+    <section id="settings-section" class="settings-section hidden">
+      <div class="container mx-auto px-4 py-8">
+        <h2 class="text-3xl font-bold text-center mb-8">Admin-Einstellungen</h2>
+        <div class="flex flex-col md:flex-row gap-6">
+          <!-- Menu -->
+          <div class="w-full md:w-1/4 bg-white p-4 rounded-2xl shadow-lg">
+            <nav class="flex flex-col space-y-2">
+              <button class="settings-menu-btn bg-[#007bff] text-white px-4 py-2 rounded-full hover:bg-blue-600 transition" data-section="general" onclick="showSettingsSection('general', this)">Allgemein</button>
+              <button class="settings-menu-btn bg-gray-300 text-black px-4 py-2 rounded-full hover:bg-gray-400 transition" data-section="products" onclick="showSettingsSection('products', this)">Produkte</button>
+              <button class="settings-menu-btn bg-gray-300 text-black px-4 py-2 rounded-full hover:bg-gray-400 transition" data-section="custom-card" onclick="showSettingsSection('custom-card', this)">Benutzerdefinierte Karte</button>
+              <button class="settings-menu-btn bg-gray-300 text-black px-4 py-2 rounded-full hover:bg-gray-400 transition" data-section="payments" onclick="showSettingsSection('payments', this)">Zahlungen</button>
+              <button class="settings-menu-btn bg-gray-300 text-black px-4 py-2 rounded-full hover:bg-gray-400 transition" data-section="domain" onclick="showSettingsSection('domain', this)">Domain</button>
+              <button class="settings-menu-btn bg-gray-300 text-black px-4 py-2 rounded-full hover:bg-gray-400 transition" data-section="legal" onclick="showSettingsSection('legal', this)">Rechtliches</button>
+              <button class="settings-menu-btn bg-gray-300 text-black px-4 py-2 rounded-full hover:bg-gray-400 transition" data-section="analytics" onclick="showSettingsSection('analytics', this)">Analytics</button>
+              <button class="settings-menu-btn bg-gray-300 text-black px-4 py-2 rounded-full hover:bg-gray-400 transition" data-section="orders" onclick="showSettingsSection('orders', this)">Bestellungen</button>
+              <button class="settings-menu-btn bg-gray-300 text-black px-4 py-2 rounded-full hover:bg-gray-400 transition" data-section="key" onclick="showSettingsSection('key', this)">Schlüssel ändern</button>
+            </nav>
+          </div>
+          <!-- Settings Content -->
+          <div class="w-full md:w-3/4 bg-white p-6 rounded-2xl shadow-lg">
+            <!-- General Settings -->
+            <div id="settings-general" class="settings-content">
+              <h3 class="text-xl font-semibold mb-4">Allgemein</h3>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Shop-Name</label>
+                <input type="text" id="shop-name" value="Streetstyle" class="w-full p-2 border rounded-xl">
+              </div>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Banner-Bild</label>
+                <input type="file" id="banner-image-upload" accept="image/*" class="w-full p-2 border rounded-xl">
+              </div>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Social Media Links</label>
+                <input type="text" id="youtube" placeholder="YouTube URL" class="w-full p-2 border rounded-xl mb-2" value="https://youtube.com">
+                <input type="text" id="tiktok" placeholder="TikTok URL" class="w-full p-2 border rounded-xl mb-2" value="https://tiktok.com">
+                <input type="text" id="instagram" placeholder="Instagram URL" class="w-full p-2 border rounded-xl mb-2" value="https://instagram.com">
+              </div>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Support-Informationen</label>
+                <input type="text" id="phone" placeholder="Telefonnummer" value="+49 123 456789" class="w-full p-2 border rounded-xl mb-2">
+                <input type="text" id="support-hours" value="Mo-Fr, 9-17 Uhr" placeholder="Supportzeiten" class="w-full p-2 border rounded-xl">
+              </div>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Footer-Text</label>
+                <input type="text" id="footer-text" value="© 2025 Streetstyle. Alle Rechte vorbehalten." class="w-full p-2 border rounded-xl">
+              </div>
+            </div>
+            <!-- Products Settings -->
+            <div id="settings-products" class="settings-content hidden">
+              <h3 class="text-xl font-semibold mb-4">Produkte</h3>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Produkt hinzufügen</label>
+                <select id="product-category" class="w-full p-2 border rounded-xl mb-2"></select>
+                <input type="text" id="product-title" placeholder="Produkttitel (z.B. Slim Jeans)" class="w-full p-2 border rounded-xl mb-2" required>
+                <input type="text" id="product-price" placeholder="Preis (z.B. 39,99 €)" class="w-full p-2 border rounded-xl mb-2" required>
+                <input type="file" id="product-image" accept="image/*" class="w-full p-2 border rounded-xl mb-2" required>
+                <button class="bg-[#28a745] text-white px-4 py-2 rounded-full hover:bg-green-600 transition w-full" onclick="addProduct(this)">Produkt hinzufügen</button>
+              </div>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Produktverwaltung</label>
+                <button class="bg-[#28a745] text-white px-4 py-2 rounded-full hover:bg-green-600 transition w-full" onclick="showSection('products-management')">Produkte verwalten</button>
+              </div>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Kategorien</label>
+                <input type="text" id="category-input" placeholder="Neue Kategorie (z.B. T-Shirts)" class="w-full p-2 border rounded-xl mb-2">
+                <button class="bg-[#28a745] text-white px-4 py-2 rounded-full hover:bg-green-600 transition w-full" onclick="addCategory(this)">Kategorie hinzufügen</button>
+                <ul id="category-list" class="mt-2"></ul>
+              </div>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Printify Produkte</label>
+                <div class="flex items-center mb-2">
+                  <input type="text" id="printify-api" placeholder="Printify API-Schlüssel" class="w-full p-2 border rounded-xl mr-2">
+                  <button class="bg-gray-500 text-white px-4 py-2 rounded-full hover:bg-gray-600 transition" onclick="toggleApiKeyVisibility('printify-api', this)">Verbergen</button>
+                </div>
+                <button class="bg-[#28a745] text-white px-4 py-2 rounded-full hover:bg-green-600 transition w-full" onclick="wiggle(this)">Produkte importieren</button>
+              </div>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Empfohlenes Produkt</label>
+                <button class="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 transition w-full" onclick="clearFeaturedProduct(this)">Karte entfernen</button>
+              </div>
+            </div>
+            <!-- Custom Card Settings -->
+            <div id="settings-custom-card" class="settings-content hidden">
+              <h3 class="text-xl font-semibold mb-4">Benutzerdefinierte Karte</h3>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Abschnittstitel</label>
+                <input type="text" id="custom-card-section-title" placeholder="Abschnittstitel (z.B. Unsere Marke)" class="w-full p-2 border rounded-xl mb-2" value="Unsere Marke">
+              </div>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Text</label>
+                <textarea id="custom-card-text" placeholder="Text (z.B. Wie ist meine Marke aufgebaut)" class="w-full p-2 border rounded-xl mb-2" rows="4"></textarea>
+              </div>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Bild</label>
+                <input type="file" id="custom-card-image" accept="image/*" class="w-full p-2 border rounded-xl mb-2">
+              </div>
+              <div class="mb-2">
+                <button class="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 transition w-full" onclick="clearCustomCard(this)">Karte entfernen</button>
+              </div>
+            </div>
+            <!-- Payments Settings -->
+            <div id="settings-payments" class="settings-content hidden">
+              <h3 class="text-xl font-semibold mb-4">Zahlungen</h3>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Zahlungsanbieter</label>
+                <label class="flex items-center mb-2">
+                  <input type="checkbox" id="stripe" class="mr-2" checked>
+                  <span>Stripe</span>
+                </label>
+                <div class="flex items-center mb-2">
+                  <input type="text" id="stripe-api" placeholder="Stripe API-Schlüssel" class="w-full p-2 border rounded-xl mr-2">
+                  <button class="bg-gray-500 text-white px-4 py-2 rounded-full hover:bg-gray-600 transition" onclick="toggleApiKeyVisibility('stripe-api', this)">Verbergen</button>
+                </div>
+                <label class="flex items-center mb-2">
+                  <input type="checkbox" id="paypal" class="mr-2" checked>
+                  <span>PayPal</span>
+                </label>
+                <div class="flex items-center mb-2">
+                  <input type="text" id="paypal-api" placeholder="PayPal API-Schlüssel" class="w-full p-2 border rounded-xl mr-2">
+                  <button class="bg-gray-500 text-white px-4 py-2 rounded-full hover:bg-gray-600 transition" onclick="toggleApiKeyVisibility('paypal-api', this)">Verbergen</button>
+                </div>
+              </div>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Bankdaten für Auszahlungen</label>
+                <input type="text" id="bank-iban" placeholder="IBAN" class="w-full p-2 border rounded-xl mb-2">
+                <input type="text" id="bank-bic" placeholder="BIC" class="w-full p-2 border rounded-xl mb-2">
+                <select id="payout-frequency" class="w-full p-2 border rounded-xl mb-2" onchange="updatePayoutDayField()">
+                  <option value="monthly">Monatliche Auszahlung</option>
+                  <option value="weekly">Wöchentliche Auszahlung</option>
+                </select>
+                <input type="number" id="payout-day" placeholder="Tag des Monats (1-31)" class="w-full p-2 border rounded-xl mb-2 hidden" min="1" max="31">
+              </div>
+            </div>
+            <!-- Domain Settings -->
+            <div id="settings-domain" class="settings-content hidden">
+              <h3 class="text-xl font-semibold mb-4">Domain</h3>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">GoDaddy Domain</label>
+                <input type="text" id="godaddy-domain" placeholder="Domain (z.B. streetstyle.de)" class="w-full p-2 border rounded-xl mb-2">
+                <div class="flex items-center mb-2">
+                  <input type="text" id="godaddy-api" placeholder="GoDaddy API-Schlüssel" class="w-full p-2 border rounded-xl mr-2">
+                  <button class="bg-gray-500 text-white px-4 py-2 rounded-full hover:bg-gray-600 transition" onclick="toggleApiKeyVisibility('godaddy-api', this)">Verbergen</button>
+                </div>
+                <button class="bg-[#28a745] text-white px-4 py-2 rounded-full hover:bg-green-600 transition w-full" onclick="wiggle(this); saveSettings()">Domain aktivieren</button>
+              </div>
+            </div>
+            <!-- Legal Settings -->
+            <div id="settings-legal" class="settings-content hidden">
+              <h3 class="text-xl font-semibold mb-4">Rechtliches</h3>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">AGBs</label>
+                <textarea id="agb" class="w-full p-2 border rounded-xl" rows="4" placeholder="AGBs Text"></textarea>
+              </div>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Impressum</label>
+                <textarea id="impressum" class="w-full p-2 border rounded-xl" rows="4" placeholder="Impressum Text"></textarea>
+              </div>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Datenschutz</label>
+                <textarea id="datenschutz" class="w-full p-2 border rounded-xl" rows="4" placeholder="Datenschutz Text"></textarea>
+              </div>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Widerrufsrecht</label>
+                <textarea id="widerrufsrecht" class="w-full p-2 border rounded-xl" rows="4" placeholder="Widerrufsrecht Text"></textarea>
+              </div>
+            </div>
+            <!-- Analytics Settings -->
+            <div id="settings-analytics" class="settings-content hidden">
+              <h3 class="text-xl font-semibold mb-4">Analytics</h3>
+              <div class="mb-2">
+                <button class="bg-[#28a745] text-white px-4 py-2 rounded-full hover:bg-green-600 transition w-full" onclick="showSection('analytics')">Analytics anzeigen</button>
+              </div>
+            </div>
+            <!-- Orders Settings -->
+            <div id="settings-orders" class="settings-content hidden">
+              <h3 class="text-xl font-semibold mb-4">Bestellungen</h3>
+              <div class="mb-4">
+                <h4 class="text-lg font-semibold mb-2">Bestellungen</h4>
+                <ul id="orders-list" class="list-disc pl-5"></ul>
+              </div>
+              <div id="order-details" class="mt-4 hidden">
+                <h4 class="text-lg font-semibold mb-2">Bestelldetails</h4>
+                <div id="order-details-content" class="bg-gray-100 p-4 rounded-xl"></div>
+              </div>
+              <div class="mb-4">
+                <h4 class="text-lg font-semibold mb-2">Bibliothek</h4>
+                <ul id="library-list" class="list-disc pl-5"></ul>
+              </div>
+              <div class="text-center mt-4">
+                <button id="clear-library-btn" class="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 transition hidden" onclick="clearLibrary(this)">Bibliothek leeren</button>
+              </div>
+            </div>
+            <!-- Key Change Settings -->
+            <div id="settings-key" class="settings-content hidden">
+              <h3 class="text-xl font-semibold mb-4">Schlüssel ändern</h3>
+              <div class="mb-2">
+                <label class="block text-lg font-semibold mb-1">Neuer Admin-Schlüssel</label>
+                <input type="text" id="new-admin-key" placeholder="Neuer Schlüssel" class="w-full p-2 border rounded-xl">
+              </div>
+            </div>
+            <!-- Save Button -->
+            <div class="text-center mt-6">
+              <button class="bg-[#28a745] text-white px-6 py-3 rounded-full hover:bg-green-600 transition" onclick="saveSettings(this)">Einstellungen speichern</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Products Management Section -->
+    <section id="products-management-section" class="products-management-section hidden">
+      <div class="container mx-auto px-4 py-8">
+        <h2 class="text-3xl font-bold text-center mb-8">Produktverwaltung</h2>
+        <div class="flex justify-center space-x-4 mb-8">
+          <button class="category-btn bg-[#007bff] text-white px-6 py-3 rounded-full hover:bg-blue-600 transition" data-category="all" onclick="filterProductsManagement('all', this)">Alle</button>
+          <div id="management-category-buttons"></div>
+        </div>
+        <div id="management-products" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+        <div class="text-center mt-6">
+          <button class="bg-[#28a745] text-white px-6 py-3 rounded-full hover:bg-green-600 transition" onclick="showSection('settings')">Zurück zu Einstellungen</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Analytics Section -->
+    <section id="analytics-section" class="analytics-section hidden">
+      <div class="container mx-auto px-4 py-8">
+        <h2 class="text-3xl font-bold text-center mb-8">Analytics</h2>
+        <div class="bg-white p-6 rounded-2xl shadow-lg max-w-4xl mx-auto">
+          <div class="mb-4">
+            <h3 class="text-lg font-semibold mb-2">Täglicher Umsatz (aktueller Monat)</h3>
+            <canvas id="daily-revenue-chart" height="100"></canvas>
+          </div>
+          <div class="mb-4">
+            <h3 class="text-lg font-semibold mb-2">Gesamtumsatz (gesamt)</h3>
+            <p id="total-revenue">0,00 €</p>
+          </div>
+          <div class="mb-4">
+            <h3 class="text-lg font-semibold mb-2">Einnahmen aktueller Monat</h3>
+            <p id="current-month-revenue">0,00 €</p>
+          </div>
+          <div class="mb-4">
+            <h3 class="text-lg font-semibold mb-2">Monatlicher Umsatz</h3>
+            <table class="w-full border-collapse">
+              <thead>
+                <tr class="bg-gray-100">
+                  <th class="border p-2">Monat</th>
+                  <th class="border p-2">Umsatz</th>
+                </tr>
+              </thead>
+              <tbody id="monthly-revenue-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Product Section -->
+    <section id="product-section" class="product-section hidden">
+      <div class="container mx-auto px-4 py-8">
+        <div id="product-details" class="bg-white p-6 rounded-2xl shadow-lg max-w-2xl mx-auto flex flex-col md:flex-row"></div>
+      </div>
+    </section>
+
+    <!-- Cart Section -->
+    <section id="cart-section" class="cart-section hidden">
+      <div class="container mx-auto px-4 py-8">
+        <h2 class="text-3xl font-bold text-center mb-8">Warenkorb</h2>
+        <div id="cart-items" class="bg-white p-6 rounded-2xl shadow-lg max-w-2xl mx-auto"></div>
+        <div class="text-center mt-6">
+          <button class="bg-[#28a745] text-white px-6 py-3 rounded-full hover:bg-green-600 transition" onclick="wiggle(this); showSection('checkout')">Zum Checkout</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Checkout Section -->
+    <section id="checkout-section" class="checkout-section hidden">
+      <div class="container mx-auto px-4 py-8">
+        <h2 class="text-3xl font-bold text-center mb-8">Checkout</h2>
+        <div class="bg-white p-6 rounded-2xl shadow-lg max-w-2xl mx-auto">
+          <div class="mb-4">
+            <label class="block text-lg font-semibold mb-2">Zahlungsmethode</label>
+            <select id="payment-method" class="w-full p-3 border rounded-xl" onchange="updatePaymentFields()">
+              <option value="credit-card">Kreditkarte</option>
+              <option value="bank-transfer">Banküberweisung</option>
+              <option value="stripe">Stripe</option>
+              <option value="paypal">PayPal</option>
+            </select>
+          </div>
+          <div id="payment-details" class="mb-4">
+            <!-- Dynamische Felder für Zahlungsmethoden -->
+          </div>
+          <div class="mb-4">
+            <label class="block text-lg font-semibold mb-2">Lieferadresse</label>
+            <input type="text" id="address" placeholder="Adresse" class="w-full p-3 border rounded-xl mb-2">
+            <input type="text" id="city" placeholder="Stadt" class="w-full p-3 border rounded-xl mb-2">
+            <input type="text" id="zip" placeholder="PLZ" class="w-full p-3 border rounded-xl">
+          </div>
+          <div class="text-center">
+            <button class="bg-[#28a745] text-white px-6 py-3 rounded-full hover:bg-green-600 transition" onclick="completeOrder(this)">Bestellung abschließen</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Legal Pages Sections -->
+    <section id="agb-section" class="legal-section hidden">
+      <div class="container mx-auto px-4 py-8">
+        <h2 class="text-3xl font-bold text-center mb-8">AGBs</h2>
+        <div id="agb-content" class="bg-white p-6 rounded-2xl shadow-lg max-w-2xl mx-auto"></div>
+      </div>
+    </section>
+    <section id="impressum-section" class="legal-section hidden">
+      <div class="container mx-auto px-4 py-8">
+        <h2 class="text-3xl font-bold text-center mb-8">Impressum</h2>
+        <div id="impressum-content" class="bg-white p-6 rounded-2xl shadow-lg max-w-2xl mx-auto"></div>
+      </div>
+    </section>
+    <section id="datenschutz-section" class="legal-section hidden">
+      <div class="container mx-auto px-4 py-8">
+        <h2 class="text-3xl font-bold text-center mb-8">Datenschutz</h2>
+        <div id="datenschutz-content" class="bg-white p-6 rounded-2xl shadow-lg max-w-2xl mx-auto"></div>
+      </div>
+    </section>
+    <section id="widerrufsrecht-section" class="legal-section hidden">
+      <div class="container mx-auto px-4 py-8">
+        <h2 class="text-3xl font-bold text-center mb-8">Widerrufsrecht</h2>
+        <div id="widerrufsrecht-content" class="bg-white p-6 rounded-2xl shadow-lg max-w-2xl mx-auto"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-[#1a2526] text-white py-8 px-6">
+    <div class="container mx-auto text-center">
+      <div id="footer-links" class="flex justify-center space-x-4 mb-4">
+        <a href="#" class="hover:text-[#007bff]" onclick="showSection('agb')">AGBs</a>
+        <a href="#" class="hover:text-[#007bff]" onclick="showSection('impressum')">Impressum</a>
+        <a href="#" class="hover:text-[#007bff]" onclick="showSection('datenschutz')">Datenschutz</a>
+        <a href="#" class="hover:text-[#007bff]" onclick="showSection('widerrufsrecht')">Widerrufsrecht</a>
+        <a id="youtube-link" href="https://youtube.com" class="hover:text-[#007bff]">YouTube</a>
+        <a id="tiktok-link" href="https://tiktok.com" class="hover:text-[#007bff]">TikTok</a>
+        <a id="instagram-link" href="https://instagram.com" class="hover:text-[#007bff]">Instagram</a>
+        <a href="#" class="hover:text-[#007bff]" onclick="logout()">Ausloggen</a>
+      </div>
+      <p id="footer-contact" class="mb-2">Telefon: +49 123 456789 | Support: Mo-Fr, 9-17 Uhr</p>
+      <p id="footer-copyright">© 2025 Streetstyle. Alle Rechte vorbehalten.</p>
+    </div>
+  </footer>
+
+  <!-- JavaScript for Interactivity -->
+  <script>
+    // State Management
+    let state = {
+      categories: ['tshirts', 'hoodies', 'caps'],
+      products: [
+        { id: 'classic-tee', category: 'tshirts', title: 'Classic Tee', price: '29,99 €', image: 'https://via.placeholder.com/300?text=Classic+Tee', active: true },
+        { id: 'cozy-hoodie', category: 'hoodies', title: 'Cozy Hoodie', price: '49,99 €', image: 'https://via.placeholder.com/300?text=Cozy+Hoodie', active: true }
+      ],
+      cart: [],
+      orders: [],
+      library: [],
+      settings: {
+        shopName: 'Streetstyle',
+        banner: 'https://via.placeholder.com/1200x400?text=Streetstyle+Banner',
+        bankDetails: { iban: '', bic: '', payoutFrequency: 'monthly', payoutDay: 1 },
+        customCard: { sectionTitle: 'Unsere Marke', text: '', image: '' },
+        featuredProductEnabled: true,
+        agb: '',
+        impressum: '',
+        datenschutz: '',
+        widerrufsrecht: '',
+        stripe: true,
+        stripeApi: '',
+        paypal: true,
+        paypalApi: '',
+        godaddyDomain: '',
+        godaddyApi: '',
+        printifyApi: '',
+        phone: '+49 123 456789',
+        supportHours: 'Mo-Fr, 9-17 Uhr',
+        youtube: 'https://youtube.com',
+        tiktok: 'https://tiktok.com',
+        instagram: 'https://instagram.com',
+        footerText: '© 2025 Streetstyle. Alle Rechte vorbehalten.'
+      },
+      cartCount: 0,
+      isAdmin: false,
+      adminKey: 'chimaking' // Initial admin key
+    };
+
+    // Login State
+    let currentRole = "";
+    let verificationCode = null; // Store verification code for Kunde
+
+    // Login Functionality
+    document.getElementById("login-icon").onclick = () => {
+      const drop = document.getElementById("login-dropdown");
+      drop.style.display = drop.style.display === "none" ? "block" : "none";
+    };
+
+    function showLoginForm(role) {
+      currentRole = role;
+      document.getElementById("login-form").style.display = "block";
+      document.getElementById("admin-key").style.display = (role === "admin") ? "block" : "none";
+      document.getElementById("kunde-verification").style.display = (role === "kunde") ? "block" : "none";
+      document.getElementById("send-verification").style.display = (role === "kunde") ? "block" : "none";
+    }
+
+    function sendVerificationCode() {
+      const email = document.getElementById("email").value;
+      if (email) {
+        verificationCode = Math.floor(10000 + Math.random() * 90000).toString(); // Generate 5-digit code
+        const verificationDisplay = document.getElementById("verification-display");
+        verificationDisplay.textContent = `Verifizierungscode für ${email}: ${verificationCode}`;
+        verificationDisplay.style.display = "block";
+        setTimeout(() => {
+          verificationDisplay.style.display = "none";
+        }, 30000); // Hide after 30 seconds
+      } else {
+        alert("Bitte gib eine E-Mail-Adresse ein.");
+      }
+    }
+
+    function guestAccess() {
+      currentRole = "gast";
+      state.isAdmin = false;
+      alert("Gastzugang aktiv. Eingeschränkter Zugriff.");
+      document.getElementById("login-icon").textContent = "✅ Gast";
+      document.getElementById("settings-icon").style.display = "none";
+      document.getElementById("login-dropdown").style.display = "none";
+    }
+
+    function submitLogin() {
+      const email = document.getElementById("email").value;
+      const pass = document.getElementById("password").value;
+      const key = document.getElementById("admin-key").value;
+      const verification = document.getElementById("kunde-verification").value;
+
+      if (currentRole === "admin") {
+        if (email && pass && key === state.adminKey) {
+          state.isAdmin = true;
+          alert("Admin-Login erfolgreich");
+          document.getElementById("settings-icon").style.display = "block";
+          document.getElementById("login-icon").textContent = "✅ Admin";
+          document.getElementById("login-form").style.display = "none";
+          document.getElementById("login-dropdown").style.display = "none";
+        } else {
+          alert("Ungültige E-Mail, Passwort oder Schlüssel!");
+        }
+      } else if (currentRole === "kunde") {
+        state.isAdmin = false;
+        if (email && pass && verification === verificationCode) {
+          alert("Kundenlogin erfolgreich");
+          document.getElementById("login-icon").textContent = "✅ Kunde";
+          document.getElementById("settings-icon").style.display = "none";
+          document.getElementById("login-form").style.display = "none";
+          document.getElementById("login-dropdown").style.display = "none";
+          document.getElementById("verification-display").style.display = "none";
+          verificationCode = null; // Reset code
+        } else {
+          alert("Ungültiger Verifizierungscode oder fehlende E-Mail/Passwort.");
+        }
+      }
+    }
+
+    // Logout Functionality
+    function logout() {
+      state.isAdmin = false;
+      currentRole = "";
+      verificationCode = null;
+      document.getElementById("login-icon").textContent = "🔐 Login ▼";
+      document.getElementById("settings-icon").style.display = "none";
+      document.getElementById("login-form").style.display = "none";
+      document.getElementById("login-dropdown").style.display = "none";
+      document.getElementById("verification-display").style.display = "none";
+      alert("Erfolgreich ausgeloggt.");
+      showSection('home');
+    }
+
+    // Wiggle Animation
+    function wiggle(element) {
+      element.classList.add('wiggle');
+      setTimeout(() => element.classList.remove('wiggle'), 300);
+    }
+
+    // Section Navigation
+    function showSection(section) {
+      if (section === 'settings' && !state.isAdmin) {
+        alert("Nur Admins können die Einstellungen bearbeiten. Bitte als Admin einloggen.");
+        return;
+      }
+      document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+      document.getElementById(`${section}-section`).classList.remove('hidden');
+      if (section === 'home') {
+        renderCategories();
+        renderFeaturedProduct();
+        renderCustomCard();
+        renderProducts();
+      } else if (section === 'settings') {
+        renderCategoryList();
+        updateProductCategorySelect();
+        updatePayoutDayField();
+        showSettingsSection('general', document.querySelector('.settings-menu-btn[data-section="general"]')); // Show general by default
+      } else if (section === 'cart') {
+        renderCart();
+      } else if (section === 'analytics') {
+        renderAnalytics();
+      } else if (section === 'products-management') {
+        renderManagementCategories();
+        filterProductsManagement('all', document.querySelector('#management-category-buttons [data-category="all"]'));
+      } else if (section === 'agb') {
+        document.getElementById('agb-content').textContent = state.settings.agb || 'Keine AGBs eingepflegt.';
+      } else if (section === 'impressum') {
+        document.getElementById('impressum-content').textContent = state.settings.impressum || 'Kein Impressum eingepflegt.';
+      } else if (section === 'datenschutz') {
+        document.getElementById('datenschutz-content').textContent = state.settings.datenschutz || 'Kein Datenschutz eingepflegt.';
+      } else if (section === 'widerrufsrecht') {
+        document.getElementById('widerrufsrecht-content').textContent = state.settings.widerrufsrecht || 'Kein Widerrufsrecht eingepflegt.';
+      }
+    }
+
+    // Show Settings Section
+    function showSettingsSection(section, button) {
+      document.querySelectorAll('.settings-content').forEach(content => content.classList.add('hidden'));
+      document.getElementById(`settings-${section}`).classList.remove('hidden');
+      document.querySelectorAll('.settings-menu-btn').forEach(btn => {
+        btn.className = 'settings-menu-btn bg-gray-300 text-black px-4 py-2 rounded-full hover:bg-gray-400 transition';
+      });
+      button.className = 'settings-menu-btn bg-[#007bff] text-white px-4 py-2 rounded-full hover:bg-blue-600 transition';
+      wiggle(button);
+      if (section === 'orders') {
+        renderOrders();
+      }
+    }
+
+    // Update Payment Fields
+    function updatePaymentFields() {
+      const method = document.getElementById('payment-method').value;
+      const paymentDetails = document.getElementById('payment-details');
+      paymentDetails.innerHTML = '';
+      if (method === 'credit-card') {
+        paymentDetails.innerHTML = `
+          <input type="text" id="card-number" placeholder="Kartenummer (16 Ziffern)" class="w-full p-3 border rounded-xl mb-2" required>
+          <input type="text" id="card-expiry" placeholder="Ablaufdatum (MM/JJ)" class="w-full p-3 border rounded-xl mb-2" required>
+          <input type="text" id="card-cvv" placeholder="CVV (3-4 Ziffern)" class="w-full p-3 border rounded-xl mb-2" required>
+        `;
+      } else if (method === 'paypal') {
+        paymentDetails.innerHTML = `
+          <input type="email" id="paypal-email" placeholder="PayPal E-Mail" class="w-full p-3 border rounded-xl mb-2" required>
+        `;
+      } else if (method === 'stripe') {
+        paymentDetails.innerHTML = `
+          <input type="text" id="stripe-id" placeholder="Stripe Zahlungs-ID (z.B. E-Mail)" class="w-full p-3 border rounded-xl mb-2" required>
+        `;
+      } else if (method === 'bank-transfer') {
+        paymentDetails.innerHTML = `
+          <input type="text" id="bank-transfer-iban" placeholder="IBAN" class="w-full p-3 border rounded-xl mb-2" required>
+          <input type="text" id="bank-transfer-bic" placeholder="BIC" class="w-full p-3 border rounded-xl mb-2" required>
+        `;
+      }
+    }
+
+    // Update Payout Day Field Visibility
+    function updatePayoutDayField() {
+      const frequency = document.getElementById('payout-frequency').value;
+      const payoutDayField = document.getElementById('payout-day');
+      if (frequency === 'monthly') {
+        payoutDayField.classList.remove('hidden');
+      } else {
+        payoutDayField.classList.add('hidden');
+      }
+    }
+
+    // Toggle API Key Visibility
+    function toggleApiKeyVisibility(inputId, button) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'text') {
+        input.type = 'password';
+        button.textContent = 'Anzeigen';
+      } else {
+        input.type = 'text';
+        button.textContent = 'Verbergen';
+      }
+      wiggle(button);
+    }
+
+    // Clear Featured Product
+    function clearFeaturedProduct(button) {
+      state.settings.featuredProductEnabled = false;
+      alert('Empfohlenes Produkt entfernt. Bitte speichere die Einstellungen.');
+      wiggle(button);
+    }
+
+    // Clear Custom Card
+    function clearCustomCard(button) {
+      state.settings.customCard = { sectionTitle: 'Unsere Marke', text: '', image: '' };
+      document.getElementById('custom-card-section-title').value = 'Unsere Marke';
+      document.getElementById('custom-card-text').value = '';
+      document.getElementById('custom-card-image').value = '';
+      alert('Benutzerdefinierte Karte entfernt. Bitte speichere die Einstellungen.');
+      wiggle(button);
+    }
+
+    // Render Categories
+    function renderCategories() {
+      const categoryButtons = document.getElementById('category-buttons');
+      categoryButtons.innerHTML = `
+        <button class="category-btn bg-[#007bff] text-white px-6 py-3 rounded-full hover:bg-blue-600 transition" data-category="all" onclick="filterProducts('all', this)">Alle</button>
+      `;
+      state.categories.forEach(category => {
+        categoryButtons.innerHTML += `
+          <button class="category-btn bg-gray-300 text-black px-6 py-3 rounded-full hover:bg-gray-400 transition" data-category="${category}" onclick="filterProducts('${category}', this)">${category.charAt(0).toUpperCase() + category.slice(1)}</button>
+        `;
+      });
+    }
+
+    // Render Management Categories
+    function renderManagementCategories() {
+      const categoryButtons = document.getElementById('management-category-buttons');
+      categoryButtons.innerHTML = `
+        <button class="category-btn bg-[#007bff] text-white px-6 py-3 rounded-full hover:bg-blue-600 transition" data-category="all" onclick="filterProductsManagement('all', this)">Alle</button>
+      `;
+      state.categories.forEach(category => {
+        categoryButtons.innerHTML += `
+          <button class="category-btn bg-gray-300 text-black px-6 py-3 rounded-full hover:bg-gray-400 transition" data-category="${category}" onclick="filterProductsManagement('${category}', this)">${category.charAt(0).toUpperCase() + category.slice(1)}</button>
+        `;
+      });
+    }
+
+    // Render Featured Product
+    function renderFeaturedProduct() {
+      const featuredProduct = document.getElementById('featured-product');
+      if (!state.settings.featuredProductEnabled) {
+        featuredProduct.parentElement.innerHTML = ''; // Remove entire section
+        return;
+      }
+      const activeProducts = state.products.filter(p => p.active);
+      if (activeProducts.length > 0) {
+        const product = activeProducts[activeProducts.length - 1]; // Neuestes aktives Produkt
+        featuredProduct.innerHTML = `
+          <img src="${product.image}" alt="${product.title}" class="w-full md:w-1/2 h-64 object-cover rounded-xl mb-4 md:mb-0 md:mr-6" onclick="wiggle(this)">
+          <div class="flex-1 text-center md:text-left">
+            <h3 class="text-xl font-semibold">${product.title}</h3>
+            <p class="text-lg mb-4">${product.price}</p>
+            <button class="bg-[#28a745] text-white px-6 py-2 rounded-full hover:bg-green-600 transition" onclick="addToCart('${product.id}', this)">Warenkorb hinzufügen</button>
+          </div>
+        `;
+      } else {
+        featuredProduct.innerHTML = '<p class="text-center">Kein Produkt verfügbar.</p>';
+      }
+    }
+
+    // Render Custom Card
+    function renderCustomCard() {
+      const customCard = document.getElementById('custom-card');
+      const customCardSectionTitle = document.getElementById('custom-card-section-title');
+      const { sectionTitle, text, image } = state.settings.customCard;
+      customCardSectionTitle.textContent = sectionTitle || 'Unsere Marke';
+      const activeProducts = state.products.filter(p => p.active);
+      const product = activeProducts.length > 0 ? activeProducts[activeProducts.length - 1] : null; // Neuestes aktives Produkt
+      if (text || image) {
+        customCard.innerHTML = `
+          <img src="${image || 'https://via.placeholder.com/300?text=Custom+Image'}" alt="${sectionTitle || 'Custom Card'}" class="w-full md:w-1/2 h-64 object-cover rounded-xl mb-4 md:mb-0 md:mr-6">
+          <div class="flex-1 text-center md:text-left">
+            <h3 class="text-xl font-semibold">${sectionTitle || 'Unsere Marke'}</h3>
+            <p class="mb-4">${text || ''}</p>
+            ${product ? `<button class="bg-[#28a745] text-white px-6 py-2 rounded-full hover:bg-green-600 transition" onclick="addToCart('${product.id}', this)">Warenkorb hinzufügen</button>` : ''}
+          </div>
+        `;
+      } else {
+        customCard.innerHTML = '';
+      }
+    }
+
+    // Filter Products (Home)
+    function filterProducts(category, button) {
+      document.querySelectorAll('#category-buttons .category-btn').forEach(btn => {
+        btn.className = 'category-btn bg-gray-300 text-black px-6 py-3 rounded-full hover:bg-gray-400 transition';
+      });
+      button.className = 'category-btn bg-[#007bff] text-white px-6 py-3 rounded-full hover:bg-blue-600 transition';
+      wiggle(button);
+
+      const products = document.getElementById('products');
+      products.innerHTML = '';
+      state.products.forEach(product => {
+        if ((category === 'all' || product.category === category) && product.active) {
+          products.innerHTML += `
+            <div class="product-card bg-white p-6 rounded-2xl shadow-lg text-center" data-category="${product.category}" onclick="showProduct('${product.id}', this)">
+              <img src="${product.image}" alt="${product.title}" class="w-full h-48 object-cover rounded-xl mb-4">
+              <h3 class="text-xl font-semibold">${product.title}</h3>
+              <p class="text-lg">${product.price}</p>
+            </div>
+          `;
+        }
+      });
+    }
+
+    // Filter Products (Management)
+    function filterProductsManagement(category, button) {
+      document.querySelectorAll('#management-category-buttons .category-btn').forEach(btn => {
+        btn.className = 'category-btn bg-gray-300 text-black px-6 py-3 rounded-full hover:bg-gray-400 transition';
+      });
+      button.className = 'category-btn bg-[#007bff] text-white px-6 py-3 rounded-full hover:bg-blue-600 transition';
+      wiggle(button);
+
+      const products = document.getElementById('management-products');
+      products.innerHTML = '';
+      state.products.forEach((product, index) => {
+        if (category === 'all' || product.category === category) {
+          const status = product.active ? 'Deaktivieren' : 'Aktivieren';
+          products.innerHTML += `
+            <div class="product-card bg-white p-6 rounded-2xl shadow-lg text-center" data-category="${product.category}" onclick="wiggle(this)">
+              <img src="${product.image}" alt="${product.title}" class="w-full h-48 object-cover rounded-xl mb-4">
+              <h3 class="text-xl font-semibold">${product.title}</h3>
+              <p class="text-lg">${product.price}</p>
+              <p class="text-sm">${product.active ? 'Aktiv' : 'Inaktiv'}</p>
+              <div class="mt-2">
+                <button class="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 transition mr-2" onclick="removeProduct(${index}, false, this); event.stopPropagation()">Löschen</button>
+                <button class="bg-blue-500 text-white px-4 py-2 rounded-full hover:bg-blue-600 transition" onclick="toggleProductActive(${index}, false, this); event.stopPropagation()">${status}</button>
+              </div>
+            </div>
+          `;
+        }
+      });
+    }
+
+    // Render Products (Home)
+    function renderProducts() {
+      filterProducts('all', document.querySelector('#category-buttons [data-category="all"]'));
+    }
+
+    // Show Product
+    function showProduct(productId, element) {
+      wiggle(element);
+      const product = state.products.find(p => p.id === productId);
+      if (product) {
+        document.getElementById('product-details').innerHTML = `
+          <img src="${product.image}" alt="${product.title}" class="w-full md:w-1/2 h-64 object-cover rounded-xl mb-4 md:mb-0 md:mr-6">
+          <div class="flex-1">
+            <h2 class="text-2xl font-bold mb-2">${product.title}</h2>
+            <p class="text-lg mb-4">${product.price}</p>
+            <button class="bg-[#28a745] text-white px-6 py-3 rounded-full hover:bg-green-600 transition w-full" onclick="addToCart('${product.id}', this)">In den Warenkorb</button>
+          </div>
+        `;
+        showSection('product');
+      }
+    }
+
+    // Add to Cart
+    function addToCart(productId, button) {
+      state.cart.push(productId);
+      state.cartCount++;
+      document.getElementById('cart-button').textContent = `Warenkorb (${state.cartCount})`;
+      wiggle(button);
+    }
+
+    // Render Cart
+    function renderCart() {
+      const cartItems = document.getElementById('cart-items');
+      cartItems.innerHTML = '';
+      if (state.cart.length === 0) {
+        cartItems.innerHTML = '<p class="text-center">Der Warenkorb ist leer.</p>';
+        return;
+      }
+      const productCounts = {};
+      state.cart.forEach(productId => {
+        productCounts[productId] = (productCounts[productId] || 0) + 1;
+      });
+      Object.entries(productCounts).forEach(([productId, quantity]) => {
+        const product = state.products.find(p => p.id === productId);
+        if (product) {
+          cartItems.innerHTML += `
+            <div class="flex justify-between items-center mb-4">
+              <div>
+                <h3 class="text-lg font-semibold">${product.title} (x${quantity})</h3>
+                <p>${product.price}</p>
+              </div>
+              <button class="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 transition" onclick="removeFromCart('${productId}', this)">Löschen</button>
+            </div>
+          `;
+        }
+      });
+    }
+
+    // Remove from Cart
+    function removeFromCart(productId, button) {
+      const index = state.cart.indexOf(productId);
+      if (index !== -1) {
+        state.cart.splice(index, 1);
+        state.cartCount--;
+        document.getElementById('cart-button').textContent = `Warenkorb (${state.cartCount})`;
+        renderCart();
+        wiggle(button);
+      }
+    }
+
+    // Complete Order
+    function completeOrder(button) {
+      const paymentMethod = document.getElementById('payment-method').value;
+      const address = document.getElementById('address').value;
+      const city = document.getElementById('city').value;
+      const zip = document.getElementById('zip').value;
+      let paymentDetails = {};
+      let isValid = true;
+
+      if (paymentMethod === 'credit-card') {
+        const cardNumber = document.getElementById('card-number')?.value;
+        const cardExpiry = document.getElementById('card-expiry')?.value;
+        const cardCvv = document.getElementById('card-cvv')?.value;
+        if (cardNumber && cardExpiry && cardCvv) {
+          paymentDetails = { cardNumber, cardExpiry, cardCvv };
+        } else {
+          isValid = false;
+        }
+      } else if (paymentMethod === 'paypal') {
+        const paypalEmail = document.getElementById('paypal-email')?.value;
+        if (paypalEmail) {
+          paymentDetails = { paypalEmail };
+        } else {
+          isValid = false;
+        }
+      } else if (paymentMethod === 'stripe') {
+        const stripeId = document.getElementById('stripe-id')?.value;
+        if (stripeId) {
+          paymentDetails = { stripeId };
+        } else {
+          isValid = false;
+        }
+      } else if (paymentMethod === 'bank-transfer') {
+        const bankIban = document.getElementById('bank-transfer-iban')?.value;
+        const bankBic = document.getElementById('bank-transfer-bic')?.value;
+        if (bankIban && bankBic) {
+          paymentDetails = { bankIban, bankBic };
+        } else {
+          isValid = false;
+        }
+      }
+
+      if (address && city && zip && isValid) {
+        const orderId = `order-${Date.now()}`;
+        const productCounts = {};
+        state.cart.forEach(productId => {
+          productCounts[productId] = (productCounts[productId] || 0) + 1;
+        });
+        const productIds = Object.keys(productCounts);
+        const quantities = Object.values(productCounts);
+        const totalAmount = productIds.reduce((sum, id, index) => {
+          const product = state.products.find(p => p.id === id);
+          return sum + parseFloat(product.price.replace(',', '.')) * quantities[index];
+        }, 0).toFixed(2).replace('.', ',');
+        const fullAddress = `${address}, ${city}, ${zip}`;
+        state.orders.push({
+          id: orderId,
+          productIds,
+          quantities,
+          date: new Date().toISOString().split('T')[0],
+          amount: `${totalAmount} €`,
+          address: fullAddress,
+          paymentMethod,
+          paymentDetails
+        });
+        alert(`Bestellung ${orderId} abgeschlossen mit ${paymentMethod}! Lieferadresse: ${fullAddress}`);
+        state.cart = [];
+        state.cartCount = 0;
+        document.getElementById('cart-button').textContent = `Warenkorb (0)`;
+        showSection('home');
+        wiggle(button);
+      } else {
+        alert('Bitte fülle alle Adress- und Zahlungsdetails aus.');
+      }
+    }
+
+    // Category Handling
+    function addCategory(button) {
+      const category = document.getElementById('category-input').value.trim().toLowerCase();
+      if (category && !state.categories.includes(category)) {
+        state.categories.push(category);
+        renderCategoryList();
+        updateProductCategorySelect();
+        document.getElementById('category-input').value = '';
+        wiggle(button || document.getElementById('category-input'));
+      }
+    }
+
+    document.getElementById('category-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addCategory(document.getElementById('category-input'));
+      }
+    });
+
+    function renderCategoryList() {
+      const categoryList = document.getElementById('category-list');
+      categoryList.innerHTML = '';
+      state.categories.forEach(category => {
+        categoryList.innerHTML += `<li class="p-2 bg-gray-100 rounded-xl mb-1">${category.charAt(0).toUpperCase() + category.slice(1)}</li>`;
+      });
+    }
+
+    // Product Handling
+    function addProduct(button) {
+      const category = document.getElementById('product-category').value;
+      const title = document.getElementById('product-title').value.trim();
+      const price = document.getElementById('product-price').value.trim();
+      const imageInput = document.getElementById('product-image');
+      const image = imageInput.files[0] ? URL.createObjectURL(imageInput.files[0]) : null;
+      if (title && price && category && image) {
+        const id = title.toLowerCase().replace(/\s+/g, '-');
+        state.products.push({ id, category, title, price, image, active: true });
+        state.settings.featuredProductEnabled = true; // Re-enable featured product if a new product is added
+        document.getElementById('product-title').value = '';
+        document.getElementById('product-price').value = '';
+        document.getElementById('product-image').value = '';
+        alert(`Produkt "${title}" hinzugefügt! Bitte speichere die Einstellungen und überprüfe es in der Produktverwaltung.`);
+        wiggle(button);
+      } else {
+        alert('Bitte fülle alle Felder aus und lade ein Bild hoch.');
+      }
+    }
+
+    document.getElementById('product-title').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addProduct(document.getElementById('product-title'));
+      }
+    });
+
+    document.getElementById('product-price').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addProduct(document.getElementById('product-price'));
+      }
+    });
+
+    function removeProduct(index, isTemp, button) {
+      state.products.splice(index, 1);
+      filterProductsManagement('all', document.querySelector('#management-category-buttons [data-category="all"]'));
+      wiggle(button);
+    }
+
+    function toggleProductActive(index, isTemp, button) {
+      state.products[index].active = !state.products[index].active;
+      filterProductsManagement('all', document.querySelector('#management-category-buttons [data-category="all"]'));
+      wiggle(button);
+    }
+
+    function updateProductCategorySelect() {
+      const select = document.getElementById('product-category');
+      select.innerHTML = '';
+      state.categories.forEach(category => {
+        select.innerHTML += `<option value="${category}">${category.charAt(0).toUpperCase() + category.slice(1)}</option>`;
+      });
+    }
+
+    // Save Settings
+    function saveSettings(button) {
+      if (!state.isAdmin) {
+        alert("Nur Admins können Einstellungen speichern.");
+        return;
+      }
+      state.settings.shopName = document.getElementById('shop-name').value;
+      const bannerInput = document.getElementById('banner-image-upload');
+      if (bannerInput.files[0]) {
+        state.settings.banner = URL.createObjectURL(bannerInput.files[0]);
+      }
+      state.settings.bankDetails.iban = document.getElementById('bank-iban').value;
+      state.settings.bankDetails.bic = document.getElementById('bank-bic').value;
+      state.settings.bankDetails.payoutFrequency = document.getElementById('payout-frequency').value;
+      const payoutDay = parseInt(document.getElementById('payout-day').value, 10);
+      if (state.settings.bankDetails.payoutFrequency === 'monthly' && payoutDay >= 1 && payoutDay <= 31) {
+        state.settings.bankDetails.payoutDay = payoutDay;
+      } else if (state.settings.bankDetails.payoutFrequency === 'weekly') {
+        state.settings.bankDetails.payoutDay = null;
+      }
+      state.settings.customCard.sectionTitle = document.getElementById('custom-card-section-title').value;
+      state.settings.customCard.text = document.getElementById('custom-card-text').value;
+      const customCardImage = document.getElementById('custom-card-image');
+      if (customCardImage.files[0]) {
+        state.settings.customCard.image = URL.createObjectURL(customCardImage.files[0]);
+      }
+      state.settings.agb = document.getElementById('agb').value;
+      state.settings.impressum = document.getElementById('impressum').value;
+      state.settings.datenschutz = document.getElementById('datenschutz').value;
+      state.settings.widerrufsrecht = document.getElementById('widerrufsrecht').value;
+      state.settings.stripe = document.getElementById('stripe').checked;
+      state.settings.stripeApi = document.getElementById('stripe-api').value;
+      state.settings.paypal = document.getElementById('paypal').checked;
+      state.settings.paypalApi = document.getElementById('paypal-api').value;
+      state.settings.godaddyDomain = document.getElementById('godaddy-domain').value;
+      state.settings.godaddyApi = document.getElementById('godaddy-api').value;
+      state.settings.printifyApi = document.getElementById('printify-api').value;
+      state.settings.phone = document.getElementById('phone').value || '+49 123 456789';
+      state.settings.supportHours = document.getElementById('support-hours').value;
+      state.settings.youtube = document.getElementById('youtube').value || 'https://youtube.com';
+      state.settings.tiktok = document.getElementById('tiktok').value || 'https://tiktok.com';
+      state.settings.instagram = document.getElementById('instagram').value || 'https://instagram.com';
+      state.settings.footerText = document.getElementById('footer-text').value;
+
+      // Update admin key if provided
+      const newKey = document.getElementById('new-admin-key')?.value;
+      if (newKey) {
+        state.adminKey = newKey;
+        document.getElementById('new-admin-key').value = '';
+        alert(`Neuer Admin-Schlüssel gesetzt: ${state.adminKey}`);
+      }
+
+      updateHeader();
+      updateWelcomeText();
+      updateBanner();
+      updateFooter();
+      renderCategories();
+      renderFeaturedProduct();
+      renderCustomCard();
+      renderProducts();
+      alert(`Einstellungen gespeichert: ${state.categories.length} Kategorien, ${state.products.length} Produkte`);
+      wiggle(button);
+      showSection('home');
+    }
+
+    // Update Header
+    function updateHeader() {
+      document.getElementById('shop-name-header').textContent = state.settings.shopName;
+    }
+
+    // Update Welcome Text
+    function updateWelcomeText() {
+      document.getElementById('welcome-text').innerHTML = `Willkommen bei <span class="text-4xl">${state.settings.shopName.toUpperCase()}</span> – jetzt unsere Kollektion entdecken!`;
+    }
+
+    // Update Banner
+    function updateBanner() {
+      document.getElementById('banner-image').src = state.settings.banner;
+    }
+
+    // Update Footer
+    function updateFooter() {
+      document.getElementById('footer-contact').textContent = `Telefon: ${state.settings.phone} | Support: ${state.settings.supportHours}`;
+      document.getElementById('youtube-link').href = state.settings.youtube;
+      document.getElementById('tiktok-link').href = state.settings.tiktok;
+      document.getElementById('instagram-link').href = state.settings.instagram;
+      document.getElementById('footer-copyright').textContent = state.settings.footerText;
+    }
+
+    // Render Analytics
+    let chartInstance = null;
+    function renderAnalytics() {
+      // Total Revenue
+      const totalRevenue = document.getElementById('total-revenue');
+      const total = state.orders.reduce((sum, order) => sum + parseFloat(order.amount.replace(',', '.')), 0).toFixed(2);
+      totalRevenue.textContent = `${total.replace('.', ',')} €`;
+
+      // Current Month Revenue
+      const currentMonthRevenue = document.getElementById('current-month-revenue');
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      const currentMonthOrders = state.orders.filter(o => o.date.slice(0, 7) === currentMonth);
+      const currentMonthTotal = currentMonthOrders.reduce((sum, order) => sum + parseFloat(order.amount.replace(',', '.')), 0).toFixed(2);
+      currentMonthRevenue.textContent = `${currentMonthTotal.replace('.', ',')} €`;
+
+      // Monthly Revenue Table
+      const monthlyRevenueTable = document.getElementById('monthly-revenue-table');
+      monthlyRevenueTable.innerHTML = '';
+      const monthlyTotals = {};
+      state.orders.forEach(order => {
+        const date = new Date(order.date);
+        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        monthlyTotals[monthKey] = (monthlyTotals[monthKey] || 0) + parseFloat(order.amount.replace(',', '.'));
+      });
+      Object.entries(monthlyTotals).sort((a, b) => b[0].localeCompare(a[0])).forEach(([monthKey, total]) => {
+        const [year, month] = monthKey.split('-');
+        const monthName = new Date(year, month - 1).toLocaleString('de-DE', { month: 'long', year: 'numeric' });
+        const isCurrentMonth = monthKey === currentMonth;
+        monthlyRevenueTable.innerHTML += `
+          <tr class="${isCurrentMonth ? 'bg-blue-100 font-bold' : ''}">
+            <td class="border p-2">${monthName}</td>
+            <td class="border p-2">${total.toFixed(2).replace('.', ',')} €</td>
+          </tr>
+        `;
+      });
+
+      // Daily Revenue Chart (Current Month)
+      const dailyRevenueData = [];
+      const labels = [];
+      const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+      for (let i = 1; i <= daysInMonth; i++) {
+        const dateStr = `${currentMonth}-${i.toString().padStart(2, '0')}`;
+        const dayOrders = state.orders.filter(o => o.date === dateStr);
+        const dayTotal = dayOrders.reduce((sum, order) => sum + parseFloat(order.amount.replace(',', '.')), 0).toFixed(2);
+        labels.push(i);
+        dailyRevenueData.push(dayTotal);
+      }
+
+      const ctx = document.getElementById('daily-revenue-chart').getContext('2d');
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Täglicher Umsatz (€)',
+            data: dailyRevenueData,
+            borderColor: '#28a745',
+            backgroundColor: 'rgba(40, 167, 69, 0.2)',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true
+  }
+          }
+        }
+      });
+    }
+
+    // Render Orders
+    function renderOrders() {
+      const ordersList = document.getElementById('orders-list');
+      ordersList.innerHTML = '';
+      state.orders.forEach(order => {
+        const productTitles = order.productIds.map((id, index) => {
+          const product = state.products.find(p => p.id === id);
+          return `${product?.title || 'Unbekannt'} (x${order.quantities[index]})`;
+        }).join(', ');
+        ordersList.innerHTML += `
+          <li class="mb-2 flex justify-between items-center cursor-pointer hover:bg-gray-100 p-2 rounded">
+            <span onclick="showOrderDetails('${order.id}', this)">Bestellung ${order.id} (${productTitles}, ${order.amount}, ${order.date})</span>
+            <div>
+              <button class="bg-[#28a745] text-white px-2 py-1 rounded-full hover:bg-green-600 transition mr-2" onclick="sendToLibrary('${order.id}', this); event.stopPropagation()">In Bibliothek senden</button>
+              <button class="bg-red-500 text-white px-2 py-1 rounded-full hover:bg-red-600 transition" onclick="deleteOrder('${order.id}', this); event.stopPropagation()">Löschen</button>
+            </div>
+          </li>
+        `;
+      });
+
+      // Render Library
+      const libraryList = document.getElementById('library-list');
+      libraryList.innerHTML = '';
+      state.library.forEach(order => {
+        const productTitles = order.productIds.map((id, index) => {
+          const product = state.products.find(p => p.id === id);
+          return `${product?.title || 'Unbekannt'} (x${order.quantities[index]})`;
+        }).join(', ');
+        libraryList.innerHTML += `
+          <li class="mb-2 flex justify-between items-center cursor-pointer hover:bg-gray-100 p-2 rounded">
+            <span>Bestellung ${order.id} (${productTitles}, ${order.amount}, ${order.date})</span>
+            <button class="bg-blue-500 text-white px-2 py-1 rounded-full hover:bg-blue-600 transition" onclick="downloadOrderPDF('${order.id}', this); event.stopPropagation()">PDF herunterladen</button>
+          </li>
+        `;
+      });
+
+      // Show Clear Library Button if > 1000 orders
+      const clearLibraryBtn = document.getElementById('clear-library-btn');
+      if (state.library.length > 1000) {
+        clearLibraryBtn.classList.remove('hidden');
+      } else {
+        clearLibraryBtn.classList.add('hidden');
+      }
+    }
+
+    // Show Order Details
+    function showOrderDetails(orderId, element) {
+      wiggle(element);
+      const order = state.orders.find(o => o.id === orderId);
+      if (order) {
+        const productDetails = order.productIds.map((id, index) => {
+          const product = state.products.find(p => p.id === id);
+          return `${product?.title || 'Unbekannt'} (x${order.quantities[index]}, ${product?.price || '0,00 €'})`;
+        }).join('<br>');
+        let paymentInfo = '';
+        if (order.paymentMethod === 'credit-card') {
+          paymentInfo = `Kartenummer: ${order.paymentDetails.cardNumber}<br>Ablaufdatum: ${order.paymentDetails.cardExpiry}<br>CVV: ${order.paymentDetails.cardCvv}`;
+        } else if (order.paymentMethod === 'paypal') {
+          paymentInfo = `PayPal E-Mail: ${order.paymentDetails.paypalEmail}`;
+        } else if (order.paymentMethod === 'stripe') {
+          paymentInfo = `Stripe-ID: ${order.paymentDetails.stripeId}`;
+        } else if (order.paymentMethod === 'bank-transfer') {
+          paymentInfo = `IBAN: ${order.paymentDetails.bankIban}<br>BIC: ${order.paymentDetails.bankBic}`;
+        }
+        document.getElementById('order-details-content').innerHTML = `
+          <p><strong>Bestellung:</strong> ${order.id}</p>
+          <p><strong>Produkte:</strong><br>${productDetails}</p>
+          <p><strong>Gesamt:</strong> ${order.amount}</p>
+          <p><strong>Datum:</strong> ${order.date}</p>
+          <p><strong>Lieferadresse:</strong> ${order.address}</p>
+          <p><strong>Zahlungsmethode:</strong> ${order.paymentMethod}</p>
+          <p><strong>Zahlungsdetails:</strong><br>${paymentInfo}</p>
+          <p><strong>Auszahlung an:</strong> IBAN: ${state.settings.bankDetails.iban || 'Nicht angegeben'}, BIC: ${state.settings.bankDetails.bic || 'Nicht angegeben'}, Häufigkeit: ${state.settings.bankDetails.payoutFrequency === 'monthly' ? 'Monatlich' : 'Wöchentlich'}</p>
+          <button class="bg-[#28a745] text-white px-4 py-2 rounded-full hover:bg-green-600 transition mt-2" onclick="sendToPrintify('${order.id}', this)">An Printify senden</button>
+        `;
+        document.getElementById('order-details').classList.remove('hidden');
+      }
+    }
+
+    // Delete Order
+    function deleteOrder(orderId, button) {
+      const index = state.orders.findIndex(o => o.id === orderId);
+      if (index !== -1) {
+        state.orders.splice(index, 1);
+        renderOrders();
+        wiggle(button);
+      }
+    }
+
+    // Send to Library
+    function sendToLibrary(orderId, button) {
+      const order = state.orders.find(o => o.id === orderId);
+      if (order && !state.library.some(o => o.id === orderId)) {
+        state.library.push({ ...order });
+        alert(`Bestellung ${orderId} in die Bibliothek gesendet!`);
+        renderOrders();
+        wiggle(button);
+      } else {
+        alert(`Bestellung ${orderId} ist bereits in der Bibliothek oder existiert nicht.`);
+      }
+    }
+
+    // Download Order as PDF
+    function downloadOrderPDF(orderId, button) {
+      const order = state.library.find(o => o.id === orderId);
+      if (order) {
+        const productDetails = order.productIds.map((id, index) => {
+          const product = state.products.find(p => p.id === id);
+          return `${product?.title || 'Unbekannt'} (x${order.quantities[index]}, ${product?.price || '0,00 €'})`;
+        }).join('<br>');
+        let paymentInfo = '';
+        if (order.paymentMethod === 'credit-card') {
+          paymentInfo = `Kartenummer: ${order.paymentDetails.cardNumber}<br>Ablaufdatum: ${order.paymentDetails.cardExpiry}<br>CVV: ${order.paymentDetails.cardCvv}`;
+        } else if (order.paymentMethod === 'paypal') {
+          paymentInfo = `PayPal E-Mail: ${order.paymentDetails.paypalEmail}`;
+        } else if (order.paymentMethod === 'stripe') {
+          paymentInfo = `Stripe-ID: ${order.paymentDetails.stripeId}`;
+        } else if (order.paymentMethod === 'bank-transfer') {
+          paymentInfo = `IBAN: ${order.paymentDetails.bankIban}<br>BIC: ${order.paymentDetails.bankBic}`;
+        }
+        const element = document.createElement('div');
+        element.innerHTML = `
+          <h2>Bestellung ${order.id}</h2>
+          <p><strong>Produkte:</strong><br>${productDetails}</p>
+          <p><strong>Gesamt:</strong> ${order.amount}</p>
+          <p><strong>Datum:</strong> ${order.date}</p>
+          <p><strong>Lieferadresse:</strong> ${order.address}</p>
+          <p><strong>Zahlungsmethode:</strong> ${order.paymentMethod}</p>
+          <p><strong>Zahlungsdetails:</strong><br>${paymentInfo}</p>
+          <p><strong>Auszahlung an:</strong> IBAN: ${state.settings.bankDetails.iban || 'Nicht angegeben'}, BIC: ${state.settings.bankDetails.bic || 'Nicht angegeben'}, Häufigkeit: ${state.settings.bankDetails.payoutFrequency === 'monthly' ? 'Monatlich' : 'Wöchentlich'}</p>
+        `;
+        element.style.padding = '20px';
+        element.style.backgroundColor = '#fff';
+        element.style.fontFamily = 'Arial, sans-serif';
+        html2pdf()
+          .from(element)
+          .set({
+            margin: 1,
+            filename: `Bestellung_${order.id}.pdf`,
+            html2canvas: { scale: 2 },
+            jsPDF: { orientation: 'portrait' }
+          })
+          .save();
+        wiggle(button);
+      }
+    }
+
+    // Clear Library
+    function clearLibrary(button) {
+      state.library = [];
+      renderOrders();
+      alert('Bibliothek geleert!');
+      wiggle(button);
+    }
+
+    // Send to Printify
+    function sendToPrintify(orderId, button) {
+      const order = state.orders.find(o => o.id === orderId);
+      if (order) {
+        const productDetails = order.productIds.map((id, index) => {
+          const product = state.products.find(p => p.id === id);
+          return `${product?.title || 'Unbekannt'} (x${order.quantities[index]}, ${product?.price || '0,00 €'})`;
+        }).join(', ');
+        let paymentInfo = '';
+        if (order.paymentMethod === 'credit-card') {
+          paymentInfo = `Kartenummer: ${order.paymentDetails.cardNumber}, Ablaufdatum: ${order.paymentDetails.cardExpiry}, CVV: ${order.paymentDetails.cardCvv}`;
+        } else if (order.paymentMethod === 'paypal') {
+          paymentInfo = `PayPal E-Mail: ${order.paymentDetails.paypalEmail}`;
+        } else if (order.paymentMethod === 'stripe') {
+          paymentInfo = `Stripe-ID: ${order.paymentDetails.stripeId}`;
+        } else if (order.paymentMethod === 'bank-transfer') {
+          paymentInfo = `IBAN: ${order.paymentDetails.bankIban}, BIC: ${order.paymentDetails.bankBic}`;
+        }
+        alert(`Bestellung ${orderId} an Printify-API gesendet!\nDetails:\nProdukte: ${productDetails}\nGesamt: ${order.amount}\nLieferadresse: ${order.address}\nZahlungsmethode: ${order.paymentMethod}\nZahlungsdetails: ${paymentInfo}\nAuszahlung: ${state.settings.bankDetails.payoutFrequency === 'monthly' ? 'Monatlich' : 'Wöchentlich'}`);
+        wiggle(button);
+      }
+    }
+
+    // Initialize
+    showSection('home');
+    updateHeader();
+    updateWelcomeText();
+    updateBanner();
+    updateFooter();
+    updatePaymentFields();
+    updatePayoutDayField();
+  </script>
+</body>
+</html>
+          <script></script>
+        </body>
+        </html>
+      
